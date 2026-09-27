@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <style id="trava-tela">html { display: none !important; }</style>
+  <script>
+      if (!sessionStorage.getItem("usuarioLogado")) window.location.replace("index.html");
+      else document.getElementById("trava-tela").remove();
+  </script>
+  <meta charset="UTF-8">
+  <title>Gestão Integrada de Clientes</title>
+  <link rel="icon" href="icon.ico" type="image/x-icon">
+  <script type="module" src="firebase-banco.js"></script>
+  <style>
+      * { font-family: 'Segoe UI', Arial, sans-serif !important; box-sizing: border-box; }
+      body { background-color: #f1f5f9; margin: 0; padding: 25px; display: flex; flex-direction: column; align-items: center; color: #1e293b; }
+      .container { background-color: #ffffff; padding: 30px; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); width: 98%; max-width: 1400px; }
+      
+      .header-padrao { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 18px; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+      
+      .btn-voltar-universal {
+          background-color: #34495e !important;
+          color: #ffffff !important;
+          border: none !important;
+          padding: 10px 20px !important;
+          font-size: 14px !important;
+          font-weight: bold !important;
+          border-radius: 8px !important;
+          cursor: pointer !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+          transition: all 0.2s ease !important;
+          margin: 0 !important;
+          text-decoration: none !important;
+      }
+      .btn-voltar-universal:hover { background-color: #2c3e50 !important; transform: translateY(-2px); }
+
+      .abas-container { display: flex; gap: 12px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; }
+      .aba-btn { padding: 12px 24px; border: none; background: #e2e8f0; color: #475569; font-weight: bold; font-size: 15px; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+      .aba-btn.ativo { background: #34495e; color: white; box-shadow: 0 4px 10px rgba(52, 73, 94, 0.2); }
+
+      .conteudo-aba { display: none; }
+      .conteudo-aba.ativo { display: block; animation: fadeIn 0.3s ease-in-out; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+      .btn-acao-principal, .btn-fidelidade-novo { background: #0284c7; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 5px rgba(2,132,199,0.2); }
+      .btn-acao-principal:hover, .btn-fidelidade-novo:hover { background: #0369a1; transform: translateY(-1px); }
+      
+      .painel-total { background: #fdf2e9; border: 1px solid #f39c12; border-radius: 10px; padding: 15px 22px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+      .painel-total span { font-size: 15px; font-weight: bold; color: #d35400; display: flex; align-items: center; gap: 8px; }
+      .painel-total strong { font-size: 20px; color: #c0392b; letter-spacing: 0.5px; }
+      .btn-olho { background: none; border: none; cursor: pointer; font-size: 18px; padding: 0; margin-left: 5px; vertical-align: middle; }
+
+      .filtros-container { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; }
+      .filtros-container select, .filtros-container input { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: white; outline: none; }
+      .filtros-container input:focus, .filtros-container select:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); }
+
+      .table-responsive { width: 100%; overflow-x: auto; border-radius: 10px; border: 1px solid #e2e8f0; background: white; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+      th { background-color: #f1f5f9; padding: 14px 16px; font-weight: 700; color: #334155; border-bottom: 2px solid #cbd5e1; text-transform: uppercase; font-size: 12px; }
+      td { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; color: #334155; }
+      tbody tr:hover { background-color: #f8fafc; }
+      
+      .divida-alta { color: #dc2626; font-weight: bold; }
+      .divida-ok { color: #059669; font-weight: bold; }
+      
+      .btn-acao { padding: 7px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; margin-right: 5px; color: white; transition: 0.2s; }
+      .btn-acao:hover { filter: brightness(0.9); transform: translateY(-1px); }
+      .btn-receber { background: #10b981; }
+      .btn-detalhes { background: #f59e0b; }
+      .btn-limite { background: #3b82f6; }
+
+      .meta-tag { background: #e8f8f5; color: #27ae60; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; display: inline-block; }
+      .brinde-tag { background: #fdf2e9; color: #d35400; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; display: inline-block; }
+
+      .modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 15px; }
+      .modal-content { background: white; padding: 30px; border-radius: 12px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
+      .modal-content.large { max-width: 900px; }
+      .modal label { display: block; text-align: left; font-weight: bold; font-size: 13px; color: #475569; margin-bottom: 5px; margin-top: 12px; }
+      .modal input, .modal select { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px; text-align: left; outline: none; }
+      .modal input:focus { border-color: #0284c7; }
+      
+      .modal-botoes { display: flex; gap: 12px; margin-top: 25px; }
+      .modal-botoes button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; font-size: 14px; transition: 0.2s; }
+      .btn-cancelar { background: #94a3b8; }
+      .btn-cancelar:hover { background: #64748b; }
+      .btn-confirmar { background: #0284c7; }
+      .btn-confirmar:hover { background: #0369a1; }
+      
+      .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: left; }
+      .info-box p { margin: 6px 0; font-size: 14px; }
+      .tabela-historico th, .tabela-historico td { padding: 10px; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <iframe id="iframe-impressao" style="display:none;"></iframe>
+
+  <div class="container">
+    <div class="header-padrao">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="btn-voltar-universal" onclick="window.location.href='sistema.html'">⬅ Voltar</button>
+        <h2 style="margin: 0; color: #1e293b; font-size: 22px;">👥 Gestão Integrada de Clientes</h2>
+      </div>
+    </div>
+
+    <!-- ABAS DE NAVEGAÇÃO -->
+    <div class="abas-container">
+      <button class="aba-btn ativo" onclick="mudarAba('crediario')">💳 Conta Corrente / Crediário</button>
+      <button class="aba-btn" onclick="mudarAba('fidelidade')">⭐ Clube Fidelidade</button>
+    </div>
+
+    <!-- ABA 1: CREDIÁRIO -->
+    <div id="aba-crediario" class="conteudo-aba ativo">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h3 style="margin: 0; color: #0284c7; font-size: 18px;">Controle de Contas e Limites de Crédito</h3>
+        <button class="btn-acao-principal" onclick="abrirModalCadastroUnico()">➕ Cadastrar Cliente</button>
+      </div>
+
+      <div class="painel-total">
+          <span>
+              📊 Total Geral a Receber (Crediário): 
+              <strong id="total-geral-empresa">R$ ••••••</strong>
+              <button class="btn-olho" id="icone-olho" onclick="alternarVisibilidadeTotal()" title="Mostrar/Ocultar Valor">👁️‍🗨️</button>
+          </span>
+          <span style="font-size: 13px; font-weight: normal; color: #7f8c8d;">(Clique no ícone para revelar valores)</span>
+      </div>
+
+      <div class="filtros-container">
+          <input type="text" id="filtroFiado" placeholder="🔍 Buscar por nome ou CPF..." style="width: 280px;" onkeyup="carregarTabelaFiados()">
+          <select id="filtroVencimento" onchange="carregarTabelaFiados()">
+              <option value="todos">📅 Todos os Vencimentos</option>
+              <option value="hoje">⚠️ Vence Hoje</option>
+              <option value="amanha">⏳ Vence Amanhã</option>
+              <option value="atrasados">🚨 Atrasados (Qualquer dia)</option>
+              <option value="atrasados_mais_de">⌛ Atrasados a mais de...</option>
+          </select>
+          <div id="div-input-dias" style="display: none; align-items: center; gap: 6px;">
+              <input type="number" id="input-dias-atraso" min="1" placeholder="Nº dias" style="width: 90px;" oninput="carregarTabelaFiados()">
+              <span style="font-size: 13px; font-weight: bold; color: #555;">dias</span>
+          </div>
+      </div>
+
+      <div class="table-responsive">
+        <table id="tabela-fiados">
+          <thead>
+            <tr>
+              <th>CPF / Documento</th>
+              <th>Nome do Cliente</th>
+              <th>Telefone</th>
+              <th>Limite</th>
+              <th>Saldo Devedor</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th style="text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-fiados"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABA 2: CLUBE FIDELIDADE -->
+    <div id="aba-fidelidade" class="conteudo-aba">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h3 style="margin: 0; color: #10b981; font-size: 18px;">Registo e Acompanhamento de Clientes Frequentes</h3>
+        <button class="btn-fidelidade-novo" onclick="abrirModalCadastroUnico()">➕ Cadastrar Cliente</button>
+      </div>
+
+      <div class="filtros-container" style="justify-content: space-between;">
+        <input type="text" id="busca-fidelidade" placeholder="🔍 Pesquisar por Nome, CPF ou Telefone..." oninput="renderizarListaFidelidade()" style="max-width: 400px; width:100%;">
+        <div style="font-size: 14px; color: #334155; font-weight: 500; background: #ffffff; padding: 8px 14px; border-radius: 6px; border: 1px solid #cbd5e1;" id="info-meta"></div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome do Cliente</th>
+              <th>CPF / CNPJ</th>
+              <th>Telefone</th>
+              <th>Progresso</th>
+              <th>Status</th>
+              <th style="text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela-fidelidade"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL DE AVISO DO SISTEMA -->
+  <div id="modalAvisoSistema" class="modal" style="display: none; z-index: 99999;">
+      <div class="modal-content" style="max-width: 420px; text-align: center;">
+          <h3 id="tituloAvisoModal" style="color: #c0392b; margin-top: 0; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">⚠️ Aviso</h3>
+          <p id="mensagemAvisoModal" style="font-size: 15px; color: #333; margin: 20px 0; font-weight: 500; white-space: pre-line; line-height: 1.5;"></p>
+          <button onclick="document.getElementById('modalAvisoSistema').style.display='none'" style="width: 100%; padding: 12px; background: #c0392b; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;">OK</button>
+      </div>
+  </div>
+
+  <!-- MODAL CADASTRO UNIFICADO -->
+  <div id="modal-cadastro-unico" class="modal">
+    <div class="modal-content">
+      <h3 id="titulo-modal-cadastro" style="color: #34495e; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">➕ Cadastrar Cliente</h3>
+      
+      <label>CPF / CNPJ (Apenas os números):</label>
+      <input type="text" id="cad-unico-doc" placeholder="Digite para verificar..." oninput="verificarDocDigitado(this.value)">
+      
+      <label>Nome Completo:</label>
+      <input type="text" id="cad-unico-nome" placeholder="Ex: Maria da Silva">
+      
+      <label>Telefone / WhatsApp:</label>
+      <input type="text" id="cad-unico-tel" placeholder="Ex: (11) 99999-9999">
+
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-top: 20px; text-align: left;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px; color: #0284c7; margin: 0;">
+              <input type="checkbox" id="cad-unico-check-crediario" style="width: 20px; height: 20px;" onchange="toggleCamposCrediario()">
+              💳 Habilitar no Crediário / Conta Fiado
+          </label>
+          <div id="campos-crediario" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+              <label>Limite de Crédito Inicial (R$):</label>
+              <input type="number" id="cad-unico-limite" step="0.01" placeholder="0 para ilimitado">
+              <label>Data de Vencimento Padrão:</label>
+              <input type="date" id="cad-unico-vencimento">
+          </div>
+      </div>
+
+      <div style="background: #fdf2e9; border: 1px solid #f39c12; border-radius: 8px; padding: 15px; margin-top: 15px; text-align: left;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px; color: #d35400; margin: 0;">
+              <input type="checkbox" id="cad-unico-check-fidelidade" style="width: 20px; height: 20px;">
+              ⭐ Participar do Clube Fidelidade
+          </label>
+      </div>
+
+      <div class="modal-botoes">
+        <button class="btn-cancelar" onclick="document.getElementById('modal-cadastro-unico').style.display='none'">Cancelar</button>
+        <button class="btn-confirmar" style="background: #34495e;" onclick="salvarCadastroUnico()">Salvar Cadastro</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-receber" class="modal">
+    <div class="modal-content">
+      <h3 style="color: #10b981; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">💰 Quitação de Conta Corrente</h3>
+      <div class="info-box">
+          <p><strong>Cliente:</strong> <span id="nome-receber"></span></p>
+          <p><strong>Dívida Total:</strong> <span style="color: #dc2626; font-weight: bold; font-size: 15px;">R$ <span id="divida-atual">0.00</span></span></p>
+      </div>
+      <input type="hidden" id="doc-receber">
+      <div style="background: #fdf2e9; border: 1px solid #f39c12; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: left;">
+          <label style="color: #d35400; margin-top:0;">Aplicar Desconto no Acerto:</label>
+          <div style="display: flex; gap: 8px; margin-top: 5px;">
+              <select id="tipo-desconto" style="width: 40%;" onchange="calcularTotalComDesconto()">
+                  <option value="valor">R$ (Valor)</option>
+                  <option value="porcentagem">% (Porcentagem)</option>
+              </select>
+              <input type="number" id="valor-desconto-input" step="0.01" placeholder="0.00" style="width: 60%;" oninput="calcularTotalComDesconto()">
+          </div>
+          <p style="margin: 8px 0 0 0; font-size: 13px; color: #333;">Total com Desconto: <b>R$ <span id="total-com-desconto">0.00</span></b></p>
+      </div>
+      <label style="color: #0284c7;">Valor Efetivo Sendo Pago (R$):</label>
+      <input type="number" id="valor-pagamento" step="0.01" style="font-weight: bold; color: #0284c7; font-size: 16px;">
+      <label>Forma de Pagamento:</label>
+      <select id="forma-pagamento-fiado">
+        <option value="Dinheiro">Dinheiro</option>
+        <option value="Pix">Pix</option>
+        <option value="Débito">Débito</option>
+        <option value="Crédito">Crédito</option>
+        <option value="Cheque">Cheque</option>
+        <option value="VR">VR</option>
+      </select>
+      <div class="modal-botoes">
+        <button class="btn-cancelar" onclick="document.getElementById('modal-receber').style.display='none'">Cancelar</button>
+        <button class="btn-confirmar" style="background: #10b981;" onclick="confirmarRecebimento()">Confirmar Pagamento</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-limite" class="modal">
+    <div class="modal-content">
+      <h3 style="color: #3b82f6; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">⚙️ Ajustar Conta do Cliente</h3>
+      <p id="nome-limite" style="font-weight: bold; margin-bottom: 15px; color: #333;"></p>
+      <input type="hidden" id="doc-limite">
+      <label>Novo Limite de Crédito (R$):</label>
+      <input type="number" id="valor-limite" step="0.01">
+      <label>Data de Vencimento:</label>
+      <input type="date" id="valor-vencimento">
+      <label style="color: #e74c3c;">🔑 Senha Master:</label>
+      <input type="password" id="senha-limite">
+      <div class="modal-botoes">
+        <button class="btn-cancelar" onclick="document.getElementById('modal-limite').style.display='none'">Cancelar</button>
+        <button class="btn-confirmar" style="background: #3b82f6;" onclick="salvarLimite()">Salvar Ajustes</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-detalhes" class="modal">
+    <div class="modal-content large">
+      <h3 style="color: #f59e0b; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">📜 Histórico de Compras - <span id="nome-detalhes"></span></h3>
+      <div style="max-height: 50vh; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 15px;">
+          <table class="tabela-historico">
+              <thead>
+                  <tr>
+                      <th style="background: #f8fafc;">Data / Hora</th>
+                      <th style="background: #f8fafc;">Nº Cupom</th>
+                      <th style="background: #f8fafc;">Itens</th>
+                      <th style="background: #f8fafc;">Valor Total</th>
+                      <th style="background: #f8fafc;">Estado</th>
+                  </tr>
+              </thead>
+              <tbody id="corpo-detalhes-historico"></tbody>
+          </table>
+      </div>
+      <button class="btn-cancelar" style="width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white;" onclick="document.getElementById('modal-detalhes').style.display='none'">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    function mostrarAviso(mensagem, titulo = "Atenção") {
+        document.getElementById("tituloAvisoModal").innerText = "⚠️ " + titulo;
+        document.getElementById("mensagemAvisoModal").innerText = mensagem;
+        document.getElementById("modalAvisoSistema").style.display = "flex";
+    }
+
+    // VALIDAÇÃO MATEMÁTICA DE CPF
+    function validarCPF(cpf) {
+        cpf = cpf.replace(/\D/g, '');
+        if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+        let soma = 0, resto;
+        for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
+        resto = (soma * 10) % 11;
+        if ((resto === 10) || (resto === 11)) resto = 0;
+        if (resto !== parseInt(cpf.substring(9, 10))) return false;
+        soma = 0;
+        for (let i = 1; i <= 10; i++) soma += parseInt(cpf.substring(i-1, i)) * (12 - i);
+        resto = (soma * 10) % 11;
+        if ((resto === 10) || (resto === 11)) resto = 0;
+        if (resto !== parseInt(cpf.substring(10, 11))) return false;
+        return true;
+    }
+
+    function mudarAba(aba) {
+        document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativo'));
+        document.querySelectorAll('.conteudo-aba').forEach(c => c.classList.remove('ativo'));
+
+        if(aba === 'crediario') {
+            document.querySelector('.aba-btn:nth-child(1)').classList.add('ativo');
+            document.getElementById('aba-crediario').classList.add('ativo');
+            carregarTabelaFiados();
+            history.replaceState(null, '', '#crediario');
+        } else {
+            document.querySelector('.aba-btn:nth-child(2)').classList.add('ativo');
+            document.getElementById('aba-fidelidade').classList.add('ativo');
+            renderizarListaFidelidade();
+            history.replaceState(null, '', '#fidelidade');
+        }
+    }
+
+    let valorTotalEmpresaGlobal = 0;
+    let totalVisivel = false;
+
+    function obterDadosNativos(chave) {
+        let dados = localStorage.getItem(chave);
+        try { return dados ? JSON.parse(dados) : null; } catch(e) { return null; }
+    }
+    function salvarDadosNativos(chave, dados) {
+        localStorage.setItem(chave, JSON.stringify(dados));
+    }
+
+    function alternarVisibilidadeTotal() {
+        totalVisivel = !totalVisivel;
+        let el = document.getElementById("total-geral-empresa");
+        let btn = document.getElementById("icone-olho");
+        if (totalVisivel) {
+            el.innerText = `R$ ${valorTotalEmpresaGlobal.toFixed(2)}`;
+            btn.innerText = "👁️";
+        } else {
+            el.innerText = "R$ ••••••";
+            btn.innerText = "👁️‍🗨️";
+        }
+    }
+
+    function carregarTabelaFiados() {
+        let clientesF = obterDadosNativos("clientesFiado") || {};
+        let filtroTexto = document.getElementById("filtroFiado").value.toLowerCase();
+        let tipoFiltroVenc = document.getElementById("filtroVencimento").value;
+        let inputDiasAtraso = parseInt(document.getElementById("input-dias-atraso").value) || 0;
+
+        document.getElementById("div-input-dias").style.display = tipoFiltroVenc === "atrasados_mais_de" ? "flex" : "none";
+        let tbody = document.getElementById("corpo-tabela-fiados");
+        tbody.innerHTML = "";
+
+        let chaves = Object.keys(clientesF);
+        if(chaves.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>Nenhum cliente registado no crediário.</td></tr>";
+            valorTotalEmpresaGlobal = 0;
+            document.getElementById("total-geral-empresa").innerText = totalVisivel ? "R$ 0,00" : "R$ ••••••";
+            return;
+        }
+
+        let hoje = new Date(); hoje.setHours(0,0,0,0);
+        let hojeStr = hoje.toISOString().split('T')[0];
+        let amanha = new Date(hoje); amanha.setDate(hoje.getDate() + 1);
+        let amanhaStr = amanha.toISOString().split('T')[0];
+
+        let somaTotalEmpresa = 0;
+        let contadorExibidos = 0;
+
+        chaves.forEach(doc => {
+            let c = clientesF[doc];
+            let divida = parseFloat(c.saldoDevedor) || 0;
+            somaTotalEmpresa += divida;
+
+            let vencimento = c.vencimento || "";
+            let passaNoFiltro = true;
+
+            if (tipoFiltroVenc === "hoje" && (vencimento !== hojeStr || divida <= 0)) passaNoFiltro = false;
+            if (tipoFiltroVenc === "amanha" && (vencimento !== amanhaStr || divida <= 0)) passaNoFiltro = false;
+            if (tipoFiltroVenc === "atrasados" && (!vencimento || vencimento >= hojeStr || divida <= 0)) passaNoFiltro = false;
+
+            if (passaNoFiltro && (c.nome.toLowerCase().includes(filtroTexto) || doc.includes(filtroTexto))) {
+                contadorExibidos++;
+                let limite = parseFloat(c.limiteCredito) || 0;
+                let textLimite = limite > 0 ? `R$ ${limite.toFixed(2)}` : "Ilimitado";
+                let textStatus = "🟢 OK";
+                let classDivida = divida > 0 ? "divida-alta" : "divida-ok";
+
+                if(limite > 0 && divida >= limite) textStatus = "🔴 Limite Atingido";
+                else if (divida > 0) textStatus = "🟡 Com Saldo";
+
+                let vencimentoHtml = vencimento ? vencimento.split('-').reverse().join('/') : "-";
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${doc}</strong></td>
+                        <td>${c.nome}</td>
+                        <td>${c.telefone || '-'}</td>
+                        <td>${textLimite}</td>
+                        <td class="${classDivida}">R$ ${divida.toFixed(2)}</td>
+                        <td>${vencimentoHtml}</td>
+                        <td>${textStatus}</td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <button class="btn-acao btn-receber" onclick="abrirModalReceber('${doc}', '${c.nome}', ${divida})">💰 Pagar</button>
+                            <button class="btn-acao btn-detalhes" onclick="abrirModalDetalhes('${c.nome}')">📜 Histórico</button>
+                            <button class="btn-acao btn-limite" onclick="abrirModalLimite('${doc}', '${c.nome}', ${limite}, '${c.vencimento || ''}')">⚙️ Ajustes</button>
+                            <button class="btn-acao" style="background:#8e44ad;" onclick="abrirModalCadastroUnico('${doc}')">✏️ Editar</button>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        if (contadorExibidos === 0) tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding: 20px;'>Nenhum registo encontrado.</td></tr>";
+
+        valorTotalEmpresaGlobal = somaTotalEmpresa;
+        document.getElementById("total-geral-empresa").innerText = totalVisivel ? `R$ ${somaTotalEmpresa.toFixed(2)}` : "R$ ••••••";
+    }
+
+    function renderizarListaFidelidade() {
+        let clientesObj = obterDadosNativos("clientesFidelidade") || {};
+        let configEmp = obterDadosNativos("configEmpresa") || {};
+        let meta = configEmp.fidelidadeMeta || 10;
+        
+        document.getElementById("info-meta").innerHTML = `<b>Meta ativa:</b> 1 Prémio a cada ${meta} compras.`;
+
+        let termo = document.getElementById("busca-fidelidade").value.trim().toLowerCase();
+        let tbody = document.getElementById("corpo-tabela-fidelidade");
+        tbody.innerHTML = "";
+
+        let filtrados = Object.values(clientesObj).filter(c => {
+            if (!termo) return true;
+            return (c.nome && c.nome.toLowerCase().includes(termo)) || (c.documento && c.documento.includes(termo)) || (c.telefone && c.telefone.includes(termo));
+        });
+
+        if (filtrados.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; color:#777; padding: 30px;'>Nenhum cliente no clube fidelidade.</td></tr>";
+            return;
+        }
+
+        filtrados.sort((a, b) => b.compras - a.compras).forEach(c => {
+            let tr = document.createElement("tr");
+            let faltam = meta - (c.compras || 0);
+            let statusHtml = (c.compras || 0) >= meta ? `<span class='brinde-tag'>🏆 PRÊMIO DISPONÍVEL!</span>` : `<span class='meta-tag'>Faltam ${faltam} compras</span>`;
+
+            tr.innerHTML = `
+                <td style="color: #2c3e50;"><strong>${c.nome}</strong></td>
+                <td style="font-family: monospace;">${c.documento}</td>
+                <td>${c.telefone || "Não informado"}</td>
+                <td style="font-size: 16px; font-weight: bold; color: #0284c7;">${c.compras || 0} <span style="font-size:12px; font-weight:normal; color:#95a5a6;">/ ${meta}</span></td>
+                <td>${statusHtml}</td>
+                <td style="text-align: center;">
+                    <button class="btn-acao" style="background:#8e44ad;" onclick="abrirModalCadastroUnico('${c.documento}')">✏️ Editar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ==============================================
+    // CADASTRO UNIFICADO, INTELIGENTE E ANTI-DUPLICAÇÃO
+    // ==============================================
+    let editandoDoc = null;
+
+    function abrirModalCadastroUnico(doc = null) { 
+        editandoDoc = doc;
+        let inputDoc = document.getElementById("cad-unico-doc");
+        
+        document.getElementById("cad-unico-nome").value = "";
+        document.getElementById("cad-unico-tel").value = "";
+        document.getElementById("cad-unico-check-crediario").checked = false;
+        document.getElementById("cad-unico-check-fidelidade").checked = false;
+        document.getElementById("cad-unico-limite").value = "";
+        document.getElementById("cad-unico-vencimento").value = "";
+        toggleCamposCrediario();
+        
+        if (doc) {
+            // MODO EDIÇÃO
+            inputDoc.value = doc;
+            inputDoc.setAttribute("readonly", "true");
+            inputDoc.style.backgroundColor = "#e2e8f0";
+            document.getElementById("titulo-modal-cadastro").innerText = "✏️ Editar Cliente";
+            
+            let cFiado = (obterDadosNativos("clientesFiado") || {})[doc];
+            let cFid = (obterDadosNativos("clientesFidelidade") || {})[doc];
+            let c = cFiado || cFid;
+            
+            if(c) {
+                document.getElementById("cad-unico-nome").value = c.nome || "";
+                document.getElementById("cad-unico-tel").value = c.telefone || "";
+            }
+            if(cFiado) {
+                document.getElementById("cad-unico-check-crediario").checked = true;
+                document.getElementById("cad-unico-limite").value = cFiado.limiteCredito || "";
+                document.getElementById("cad-unico-vencimento").value = cFiado.vencimento || "";
+            }
+            if(cFid) {
+                document.getElementById("cad-unico-check-fidelidade").checked = true;
+            }
+            toggleCamposCrediario();
+        } else {
+            // MODO NOVO CADASTRO
+            inputDoc.value = "";
+            inputDoc.removeAttribute("readonly");
+            inputDoc.style.backgroundColor = "#ffffff";
+            document.getElementById("titulo-modal-cadastro").innerText = "➕ Cadastrar Cliente (Unificado)";
+        }
+        
+        document.getElementById("modal-cadastro-unico").style.display = "flex"; 
+    }
+
+    function toggleCamposCrediario() {
+        let chk = document.getElementById("cad-unico-check-crediario").checked;
+        document.getElementById("campos-crediario").style.display = chk ? "block" : "none";
+    }
+
+    function verificarDocDigitado(docStr) {
+        if (editandoDoc) return; // Não faz isso se estiver editando
+        
+        let doc = docStr.replace(/\D/g, "");
+        if (doc.length === 11) {
+            let cFiado = (obterDadosNativos("clientesFiado") || {})[doc];
+            let cFid = (obterDadosNativos("clientesFidelidade") || {})[doc];
+            if (cFiado || cFid) {
+                mostrarAviso("Este CPF já está registrado no sistema!\n\nFeche esta janela e clique no botão '✏️ Editar' na tabela para alterar dados ou adicionar/remover módulos.");
+                document.getElementById("cad-unico-doc").value = "";
+            }
+        }
+    }
+
+    function salvarCadastroUnico() {
+        let nome = document.getElementById("cad-unico-nome").value.trim();
+        let doc = document.getElementById("cad-unico-doc").value.replace(/\D/g, "");
+        let tel = document.getElementById("cad-unico-tel").value.trim();
+        
+        let chkCrediario = document.getElementById("cad-unico-check-crediario").checked;
+        let chkFidelidade = document.getElementById("cad-unico-check-fidelidade").checked;
+
+        if (!nome || !doc) return mostrarAviso("Preencha o Nome e o CPF do cliente.");
+        if (doc.length !== 11 || !validarCPF(doc)) return mostrarAviso("O CPF informado é FALSO ou INVÁLIDO! Por favor, insira um documento verdadeiro.");
+        if (!chkCrediario && !chkFidelidade) return mostrarAviso("Selecione pelo menos um módulo (Crediário ou Fidelidade) para gravar o cliente.");
+
+        let clientesF = obterDadosNativos("clientesFiado") || {};
+        let fidelidade = obterDadosNativos("clientesFidelidade") || {};
+
+        if (!editandoDoc) {
+            // Se não está editando, bloqueia terminantemente se já existir CPF igual
+            if (clientesF[doc] || fidelidade[doc]) {
+                return mostrarAviso("Este CPF já está cadastrado!\nUse o botão 'Editar' na tabela.");
+            }
+        }
+
+        // SALVANDO NO CREDIÁRIO
+        if (chkCrediario) {
+            let limite = parseFloat(document.getElementById("cad-unico-limite").value) || 0;
+            let vencimento = document.getElementById("cad-unico-vencimento").value;
+            if (!clientesF[doc]) {
+                clientesF[doc] = { nome: nome, documento: doc, telefone: tel, limiteCredito: limite, vencimento: vencimento, saldoDevedor: 0 };
+            } else {
+                clientesF[doc].nome = nome;
+                clientesF[doc].telefone = tel;
+                if(document.getElementById("cad-unico-limite").value !== "") clientesF[doc].limiteCredito = limite;
+                if(vencimento) clientesF[doc].vencimento = vencimento;
+            }
+        } else {
+            // Se o usuário tirou o checkbox de crediário na edição, remove o cliente da conta
+            if (clientesF[doc]) {
+                if (parseFloat(clientesF[doc].saldoDevedor) > 0) {
+                    return mostrarAviso("Não é possível remover o Crediário deste cliente pois ele possui Dívida Ativa!");
+                } else {
+                    delete clientesF[doc];
+                }
+            }
+        }
+
+        // SALVANDO NO FIDELIDADE
+        if (chkFidelidade) {
+            if (!fidelidade[doc]) {
+                fidelidade[doc] = { nome: nome, documento: doc, telefone: tel, compras: 0, dataCadastro: new Date().toISOString() };
+            } else {
+                fidelidade[doc].nome = nome;
+                fidelidade[doc].telefone = tel;
+            }
+        } else {
+            if (fidelidade[doc]) {
+                delete fidelidade[doc];
+            }
+        }
+
+        salvarDadosNativos("clientesFiado", clientesF);
+        salvarDadosNativos("clientesFidelidade", fidelidade);
+
+        mostrarAviso("Cadastro salvo com sucesso!", "Sucesso");
+        document.getElementById("modal-cadastro-unico").style.display = "none";
+        
+        carregarTabelaFiados();
+        renderizarListaFidelidade();
+    }
+    // ==============================================
+
+    function abrirModalReceber(doc, nome, divida) {
+        document.getElementById("doc-receber").value = doc;
+        document.getElementById("nome-receber").innerText = nome;
+        document.getElementById("divida-atual").innerText = divida.toFixed(2);
+        document.getElementById("valor-pagamento").value = divida > 0 ? divida.toFixed(2) : "";
+        document.getElementById("total-com-desconto").innerText = divida.toFixed(2);
+        document.getElementById("modal-receber").style.display = "flex";
+    }
+
+    function calcularTotalComDesconto() {
+        let tipo = document.getElementById("tipo-desconto").value;
+        let valorDesc = parseFloat(document.getElementById("valor-desconto-input").value) || 0;
+        let base = parseFloat(document.getElementById("divida-atual").innerText) || 0;
+        let final = tipo === "valor" ? Math.max(0, base - valorDesc) : Math.max(0, base - (base * (valorDesc / 100)));
+        document.getElementById("total-com-desconto").innerText = final.toFixed(2);
+        document.getElementById("valor-pagamento").value = final.toFixed(2);
+    }
+
+    function confirmarRecebimento() {
+        let doc = document.getElementById("doc-receber").value;
+        let valorAAbater = parseFloat(document.getElementById("valor-pagamento").value);
+        if (isNaN(valorAAbater) || valorAAbater <= 0) return mostrarAviso("Digite um valor válido.");
+        let clientesF = obterDadosNativos("clientesFiado") || {};
+        if (!clientesF[doc]) return;
+        clientesF[doc].saldoDevedor = Math.max(0, parseFloat(clientesF[doc].saldoDevedor || 0) - valorAAbater);
+        salvarDadosNativos("clientesFiado", clientesF);
+        mostrarAviso("Pagamento processado com sucesso!", "Sucesso");
+        document.getElementById("modal-receber").style.display = "none";
+        carregarTabelaFiados();
+    }
+
+    function abrirModalDetalhes(nomeCliente) {
+        document.getElementById("nome-detalhes").innerText = nomeCliente;
+        document.getElementById("corpo-detalhes-historico").innerHTML = "<tr><td colspan='5' style='text-align:center;'>A carregar histórico...</td></tr>";
+        document.getElementById("modal-detalhes").style.display = "flex";
+    }
+
+    function abrirModalLimite(doc, nome, limite, vencimento) {
+        document.getElementById("doc-limite").value = doc;
+        document.getElementById("nome-limite").innerText = nome;
+        document.getElementById("valor-limite").value = limite > 0 ? limite : "";
+        document.getElementById("valor-vencimento").value = vencimento !== "undefined" ? vencimento : "";
+        document.getElementById("senha-limite").value = "";
+        document.getElementById("modal-limite").style.display = "flex";
+    }
+
+    function salvarLimite() {
+        let doc = document.getElementById("doc-limite").value;
+        let novoLimite = parseFloat(document.getElementById("valor-limite").value) || 0;
+        let novoVencimento = document.getElementById("valor-vencimento").value;
+        let senha = document.getElementById("senha-limite").value;
+        let senhasSys = obterDadosNativos("senhasSistema") || { master: "1996" };
+        if (senha !== senhasSys.master) return mostrarAviso("Palavra-passe Master incorreta!");
+        let clientesF = obterDadosNativos("clientesFiado") || {};
+        if (clientesF[doc]) {
+            clientesF[doc].limiteCredito = novoLimite;
+            clientesF[doc].vencimento = novoVencimento;
+            salvarDadosNativos("clientesFiado", clientesF);
+            mostrarAviso("Ajustes salvos com sucesso!", "Sucesso");
+            document.getElementById("modal-limite").style.display = "none";
+            carregarTabelaFiados();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if(window.location.hash === '#fidelidade') {
+            mudarAba('fidelidade');
+        } else {
+            mudarAba('crediario');
+        }
+    });
+  </script>
+</body>
+</html>

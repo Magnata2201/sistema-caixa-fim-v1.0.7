@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <style id="trava-tela">
+      html { display: none !important; }
+  </style>
+  <script>
+      if (!sessionStorage.getItem("usuarioLogado")) {
+          window.location.replace("index.html");
+      } else {
+          document.getElementById("trava-tela").remove();
+      }
+      window.logoutUsuario = function() {
+          sessionStorage.clear();
+          window.location.replace("index.html");
+      };
+      window.sairDoSistema = window.logoutUsuario;
+      
+      window.addEventListener("pageshow", function(event) { 
+          if (event.persisted && !sessionStorage.getItem("usuarioLogado")) window.location.replace("index.html"); 
+      });
+  </script>
+  <meta charset="UTF-8" />
+  <title>Fim de Estoque | Gestão Profissional</title>
+  <link rel="icon" href="icon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="todos-produtos.css" />
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script type="module" src="firebase-banco.js"></script>
+  <style>
+      /* DEMARCAÇÃO CLARA E PROFISSIONAL DAS COLUNAS DA TABELA */
+      #todos-produtos-table thead th { border: 1px solid #cbd5e1 !important; }
+      #todos-produtos-table tbody td { border: 1px solid #e2e8f0 !important; }
+      #todos-produtos-table tfoot td { border: 1px solid #cbd5e1 !important; }
+
+      /* LARGURAS PROPORCIONAIS PARA 7 COLUNAS */
+      #todos-produtos-table th:nth-child(1), #todos-produtos-table td:nth-child(1) { width: 14%; }
+      #todos-produtos-table th:nth-child(2), #todos-produtos-table td:nth-child(2) { width: 26%; }
+      #todos-produtos-table th:nth-child(3), #todos-produtos-table td:nth-child(3) { width: 8%; text-align: center; }
+      #todos-produtos-table th:nth-child(4), #todos-produtos-table td:nth-child(4) { width: 11%; text-align: left; }
+      #todos-produtos-table th:nth-child(5), #todos-produtos-table td:nth-child(5) { width: 11%; text-align: left; }
+      #todos-produtos-table th:nth-child(6), #todos-produtos-table td:nth-child(6) { width: 13%; text-align: left; }
+      #todos-produtos-table th:nth-child(7), #todos-produtos-table td:nth-child(7) { width: 17%; text-align: center; }
+
+      /* MODAL GLOBAL */
+      .modal { 
+          display: none; 
+          position: fixed; 
+          top: 0; 
+          left: 0; 
+          width: 100vw; 
+          height: 100vh; 
+          background: rgba(0, 0, 0, 0.65); 
+          align-items: center; 
+          justify-content: center; 
+          z-index: 999999; 
+      }
+
+      .modal-content-custom {
+          background: white; 
+          padding: 25px; 
+          border-radius: 8px; 
+          width: 90%; 
+          max-width: 400px; 
+          box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+          box-sizing: border-box;
+      }
+
+      .estoque-badge { background: #fef2f2 !important; border: 1px solid #fecaca !important; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #dc2626 !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-padrao">
+      <div class="header-padrao-esquerda">
+        <button class="btn-voltar-universal" style="background-color: #34495e !important; color: #ffffff !important; border: none !important; padding: 10px 20px !important; font-size: 14px !important; font-weight: bold !important; border-radius: 6px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin: 15px auto 15px 0 !important; margin-right: auto !important; text-decoration: none !important;" onclick="window.location.href='sistema.html'">⬅ Voltar</button>
+        <h2>⚠️ Produtos com Estoque Baixo </h2>
+      </div>
+      
+      <div class="botoes-direita-container">
+        <input type="text" id="filtroInput" placeholder="🔍 Filtrar por nome ou código..." class="filter-input" />
+        <button id="btnImprimirCompleto">🖨️ Imprimir</button>
+        <button id="btnSalvarPDF">📄 Salvar PDF</button>
+      </div>
+    </div>
+    
+    <div class="table-container">
+      <table id="todos-produtos-table">
+        <thead>
+          <tr>
+            <th>Código / Ref</th>
+            <th>Nome do Produto</th>
+            <th>Estoque</th>
+            <th>Preço Custo</th>
+            <th>Preço Venda</th>
+            <th>Valor Total</th>
+            <th style="text-align:center;">Ações Administrativas</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" class="total-label">Valor Total do Estoque Baixo:</td>
+            <td id="total-low-stock-value" class="total-value">R$ 0,00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div id="modalAlertaCustom" class="modal" style="display: none;">
+      <div class="modal-content-custom" style="text-align: center;">
+          <h2 id="tituloAlertaCustom" style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Aviso</h2>
+          <p id="mensagemAlertaCustom" style="font-size: 14px; color: #333; margin: 15px 0; font-weight: bold;"></p>
+          <button onclick="document.getElementById('modalAlertaCustom').style.display='none'" style="width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">OK</button>
+      </div>
+  </div>
+
+  <div id="modalEditarQtd" class="modal" style="display: none;">
+      <div class="modal-content-custom">
+          <h3 style="margin-top: 0; color: #f39c12; border-bottom: 2px solid #f39c12; padding-bottom: 8px; font-size:18px;">✏️ Editar Quantidade</h3>
+          <p id="qtdEditNome" style="font-weight: bold; color: #2c3e50; margin: 12px 0; font-size: 14px; text-align: center;"></p>
+          <input type="hidden" id="qtdEditCodigo">
+          <label style="display:block; font-weight:bold; font-size:12px; color:#555; margin-bottom:4px;">Nova Quantidade em Estoque:</label>
+          <input type="number" id="qtdEditNova" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 12px; font-size: 14px; box-sizing: border-box;">
+          <label style="display:block; font-weight:bold; font-size:12px; color:#555; margin-bottom:4px;">Senha Master:</label>
+          <input type="password" id="qtdEditSenha" placeholder="Digite a Senha Master do Sistema" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 18px; font-size: 14px; box-sizing: border-box;">
+          <div style="display: flex; gap: 10px;">
+              <button onclick="fecharModalQtd()" style="flex: 1; padding: 11px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor:pointer; font-weight:bold; font-size:14px;">Cancelar</button>
+              <button onclick="confirmarEdicaoQtd()" style="flex: 1; padding: 11px; background: #28a745; color: white; border: none; border-radius: 5px; cursor:pointer; font-weight:bold; font-size:14px;">Salvar Alteração</button>
+          </div>
+      </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    function mostrarAlerta(msg, titulo = "Aviso") {
+        document.getElementById("tituloAlertaCustom").innerText = titulo;
+        document.getElementById("mensagemAlertaCustom").innerText = msg;
+        document.getElementById("modalAlertaCustom").style.display = "flex";
+    }
+
+    window.abrirModalQtd = function(codigo, nome, qtdAtual) {
+        document.getElementById("qtdEditCodigo").value = codigo;
+        document.getElementById("qtdEditNome").innerText = nome;
+        document.getElementById("qtdEditNova").value = qtdAtual;
+        document.getElementById("qtdEditSenha").value = "";
+        document.getElementById("modalEditarQtd").style.display = "flex";
+        setTimeout(() => document.getElementById("qtdEditNova").focus(), 100);
+    }
+
+    window.fecharModalQtd = function() {
+        document.getElementById("modalEditarQtd").style.display = "none";
+    }
+
+    window.confirmarEdicaoQtd = function() {
+        var codigo = document.getElementById("qtdEditCodigo").value;
+        var novaQtd = parseInt(document.getElementById("qtdEditNova").value);
+        var senhaDigitada = document.getElementById("qtdEditSenha").value;
+        
+        if (isNaN(novaQtd) || novaQtd < 0) return mostrarAlerta("Por favor, insira uma quantidade válida.", "Atenção");
+        
+        var senhasSys = window.obterDados ? window.obterDados("senhasSistema") : null;
+        var senhaCorreta = senhasSys ? senhasSys.master : "1996"; 
+        
+        if (senhaDigitada !== senhaCorreta) return mostrarAlerta("Senha Master Incorreta! Acesso negado.", "Erro de Segurança");
+        
+        var produtos = window.obterDados ? window.obterDados("produtos") : {};
+        if (produtos && produtos[codigo]) {
+            produtos[codigo].quantidade = novaQtd;
+            if (window.salvarDados) window.salvarDados("produtos", produtos);
+            fecharModalQtd();
+            atualizarTabelaBaixoEstoque(); 
+            mostrarAlerta("Quantidade do estoque atualizada com sucesso!", "Sucesso");
+        } else {
+            mostrarAlerta("Produto não encontrado no banco de dados.", "Erro");
+        }
+    }
+
+    function atualizarTabelaBaixoEstoque() {
+      if (typeof window.obterDados !== "function") return;
+      var produtos = window.obterDados("produtos");
+      if (!produtos) produtos = {};
+
+      var filtroInput = document.getElementById("filtroInput");
+      var tbody = document.querySelector("#todos-produtos-table tbody");
+      var totalElement = document.getElementById("total-low-stock-value");
+
+      if (!tbody || !totalElement) return;
+
+      var filtro = filtroInput ? filtroInput.value.toLowerCase().trim() : "";
+      var totalVendaEstoqueBaixo = 0;
+      var filtrados = [];
+
+      var chaves = Object.keys(produtos);
+      for (var i = 0; i < chaves.length; i++) {
+          var codigo = chaves[i];
+          var p = produtos[codigo];
+          if (p.quantidade <= 5) {
+              if (codigo.toLowerCase().includes(filtro) || p.nome.toLowerCase().includes(filtro)) {
+                  filtrados.push({ codigo: codigo, p: p });
+              }
+          }
+      }
+
+      tbody.innerHTML = "";
+      if (filtrados.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding: 20px; color: #64748b;'>Nenhum produto com estoque baixo encontrado.</td></tr>";
+        totalElement.innerText = "R$ 0,00";
+        return;
+      }
+
+      filtrados.forEach(function(item) {
+        var codigo = item.codigo;
+        var p = item.p;
+        var custo = p.custo ? parseFloat(p.custo) : 0;
+        var venda = parseFloat(p.valor) || 0;
+        var qtd = parseInt(p.quantidade) || 0;
+        var totalProduto = qtd * venda;
+        totalVendaEstoqueBaixo += totalProduto;
+        
+        var isBarcode = /^\d+$/.test(codigo) && codigo.length > 3;
+        var selo = isBarcode ? `<span class="badge-barcode" title="Possui Código de Barras">Cód. Barras</span>` : "";
+        var nomeSeguro = p.nome.replace(/'/g, "\\'");
+
+        var tr = document.createElement("tr");
+        tr.innerHTML = `<td><strong>${codigo}</strong> ${selo}</td>
+                        <td style="font-weight: 500;">${p.nome}</td>
+                        <td><span class="estoque-badge">${qtd} un</span></td>
+                        <td style="color:#64748b;">R$ ${custo.toFixed(2)}</td>
+                        <td style="color:#0f172a; font-weight:600;">R$ ${venda.toFixed(2)}</td>
+                        <td style="color:#0284c7; font-weight:600;">R$ ${totalProduto.toFixed(2)}</td>
+                        <td style="text-align:center;">
+                            <div class="action-buttons">
+                                <button class="btn-acao btn-etiqueta" onclick="imprimirEtiqueta('${codigo}', '${nomeSeguro}', ${venda})">🖨️ Etiqueta</button>
+                                <button class="btn-acao btn-editar-qtd" onclick="abrirModalQtd('${codigo}', '${nomeSeguro}', ${qtd})">✏️ Estoque</button>
+                            </div>
+                        </td>`;
+        tbody.appendChild(tr);
+      });
+      totalElement.innerText = "R$ " + totalVendaEstoqueBaixo.toFixed(2);
+    }
+
+    // IFRAME INVISÍVEL PARA IMPRESSÃO DE ETIQUETA NO .EXE (SEGURANÇA CONTRA TELA BRANCA)
+    if (!document.getElementById("iframe-impressao-global")) {
+        let iframe = document.createElement("iframe");
+        iframe.id = "iframe-impressao-global";
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+    }
+
+    window.imprimirEtiqueta = function(codigo, nome, preco) {
+        var htmlStr = `
+            <html><head>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+            <style>
+                body { text-align: center; font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #fff; }
+                .etiqueta { border: 2px solid #000; border-radius: 8px; display: inline-block; padding: 15px; width: 60mm; background: white; }
+                .nome { font-size: 14px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+                .preco { font-size: 22px; font-weight: bold; margin-top: 8px; }
+            </style>
+            </head><body>
+            <div class="etiqueta">
+                <div class="nome">${nome}</div>
+                <svg id="barcode"></svg>
+                <div class="preco">R$ ${parseFloat(preco).toFixed(2)}</div>
+            </div>
+            <script>
+                JsBarcode("#barcode", "${codigo}", { format: "CODE128", width: 2, height: 50, displayValue: true, fontSize: 14, margin: 0 });
+                setTimeout(() => { window.print(); }, 800);
+            <\/script>
+            </body></html>
+        `;
+
+        let iframe = document.getElementById("iframe-impressao-global");
+        let doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(htmlStr);
+        doc.close();
+    }
+
+    document.addEventListener("dadosAtualizados", atualizarTabelaBaixoEstoque);
+    document.addEventListener("bancoPronto", atualizarTabelaBaixoEstoque);
+    
+    var inputFiltro = document.getElementById("filtroInput");
+    if (inputFiltro) inputFiltro.addEventListener("input", atualizarTabelaBaixoEstoque);
+    if (window.isBancoPronto) atualizarTabelaBaixoEstoque();
+
+    // SALVAR EM PDF LIMPO
+    var btnPdf = document.getElementById("btnSalvarPDF");
+    if (btnPdf) {
+      btnPdf.addEventListener("click", function() {
+        var container = document.querySelector(".container");
+        if (!container) return;
+
+        var clone = container.cloneNode(true);
+        var elementosParaRemover = clone.querySelectorAll("button, input, select, .quick-action-buttons, .header-padrao");
+        elementosParaRemover.forEach(function(el) { el.remove(); });
+        
+        var ths = clone.querySelectorAll("th");
+        if(ths.length > 0) ths[ths.length-1].remove();
+        var trs = clone.querySelectorAll("tbody tr");
+        trs.forEach(tr => {
+            var tds = tr.querySelectorAll("td");
+            if(tds.length > 0) tds[tds.length-1].remove();
+        });
+        
+        var tfootTd = clone.querySelector("tfoot td.total-label");
+        if(tfootTd) tfootTd.setAttribute("colspan", "5");
+
+        var wrapper = document.createElement("div");
+        var style = document.createElement("style");
+        style.textContent = "body, html { margin:0; padding:0; font-family: 'Segoe UI', Arial, sans-serif; background: #fff; } " +
+                            ".container { width: 100% !important; max-width: none !important; padding: 0 !important; box-shadow: none !important; border: none !important; } " +
+                            "table { width: 100% !important; border-collapse: collapse !important; margin-top: 15px; table-layout: auto !important; } " +
+                            "th, td { border: 1px solid #cbd5e1 !important; padding: 6px 8px !important; text-align: left; font-size: 10pt !important; color: #000; } " +
+                            "th { background-color: #f1f5f9 !important; font-weight: bold; color: #0f172a; text-align: center; } " +
+                            ".badge-barcode, .estoque-badge { border: none; background: transparent; padding: 0; color: #000; }";
+        wrapper.appendChild(style);
+
+        var cabecalhoPdf = document.createElement("h2");
+        cabecalhoPdf.style.textAlign = "center";
+        cabecalhoPdf.style.marginBottom = "20px";
+        cabecalhoPdf.style.fontSize = "20px";
+        cabecalhoPdf.style.color = "#c0392b";
+        cabecalhoPdf.innerText = "RELATÓRIO: FIM DE ESTOQUE";
+        wrapper.appendChild(cabecalhoPdf);
+        wrapper.appendChild(clone);
+
+        var dataLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+        var dataFormatada = dataLocal.toISOString().split("T")[0];
+
+        var opt = {
+          margin: 10,
+          filename: "fim_estoque_" + dataFormatada + ".pdf",
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+        };
+        html2pdf().set(opt).from(wrapper).save();
+      });
+    }
+
+    // IMPRIMIR RELATÓRIO LIMPO
+    var btnImprimir = document.getElementById("btnImprimirCompleto");
+    if (btnImprimir) {
+      btnImprimir.addEventListener("click", function() {
+        var container = document.querySelector(".container");
+        if (!container) return;
+
+        var clone = container.cloneNode(true);
+        var elementosParaRemover = clone.querySelectorAll("button, input, select, .quick-action-buttons, .header-padrao");
+        elementosParaRemover.forEach(function(el) { el.remove(); });
+        
+        var ths = clone.querySelectorAll("th");
+        if(ths.length > 0) ths[ths.length-1].remove();
+        var trs = clone.querySelectorAll("tbody tr");
+        trs.forEach(tr => {
+            var tds = tr.querySelectorAll("td");
+            if(tds.length > 0) tds[tds.length-1].remove();
+        });
+        
+        var tfootTd = clone.querySelector("tfoot td.total-label");
+        if(tfootTd) tfootTd.setAttribute("colspan", "5");
+
+        var style = document.createElement("style");
+        style.textContent = "body, html { margin:0; padding:0; font-family: 'Segoe UI', Arial, sans-serif; } " +
+                            ".container { width: 100% !important; max-width: none !important; padding: 1cm !important; box-sizing: border-box; box-shadow: none; border: none; } " +
+                            "table { width: 100% !important; border-collapse: collapse !important; margin-top: 15px; table-layout: auto !important; } " +
+                            "th, td { border: 1px solid #cbd5e1 !important; padding: 6px 8px !important; text-align: left; font-size: 10pt !important; } " +
+                            "th { background-color: #f1f5f9 !important; font-weight: bold; color: #0f172a; text-align: center; } " +
+                            ".badge-barcode { display: none !important; } " +
+                            "@page { margin: 1cm; size: A4 portrait; }"; 
+
+        var iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+
+        var doc = iframe.contentWindow.document;
+        doc.head.appendChild(style);
+        
+        var cabecalhoRelatorio = doc.createElement("h2");
+        cabecalhoRelatorio.style.textAlign = "center";
+        cabecalhoRelatorio.style.marginBottom = "20px";
+        cabecalhoRelatorio.style.fontSize = "20px";
+        cabecalhoRelatorio.style.color = "#c0392b";
+        cabecalhoRelatorio.innerText = "RELATÓRIO: FIM DE ESTOQUE ";
+        doc.body.appendChild(cabecalhoRelatorio);
+        doc.body.appendChild(clone);
+
+        setTimeout(function() {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          setTimeout(function() { document.body.removeChild(iframe); }, 1000);
+        }, 500);
+      });
+    }
+  </script>
+</body>
+</html>

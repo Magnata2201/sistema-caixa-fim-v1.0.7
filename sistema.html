@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <script>
+    // ROTEADOR DE SEGURANÇA SAAS (Bloqueio de URL)
+    (function() {
+        var modulos = JSON.parse(localStorage.getItem('saas_modulos') || "{}");
+        var path = window.location.pathname.toLowerCase();
+        
+        var paginasProtegidas = {
+            'caixa.html': 'mod_caixa', 'cupons.html': 'mod_cupons', 'cozinha.html': 'mod_cozinha',
+            'fidelidade.html': 'mod_fidelidade', 'fiado.html': 'mod_fiado', 'clientes.html': 'mod_crediario',
+            'todos-produtos.html': 'mod_todos_produtos', 'fim_estoque.html': 'mod_fim_estoque', 
+            'faturamento.html': 'mod_faturamento', 'relatorio.html': 'mod_relatorios'
+        };
+
+        for (var pagina in paginasProtegidas) {
+            if (path.includes(pagina) && modulos[paginasProtegidas[pagina]] === false) {
+                document.write('<div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:999999;color:white;font-family:sans-serif;font-size:24px;">Acesso Negado: Módulo desativado. Redirecionando...</div>');
+                setTimeout(function(){ window.location.replace("sistema.html"); }, 2000);
+                break;
+            }
+        }
+    })();
+    </script>
+    <style id="trava-tela">
+        /* A página nasce totalmente invisível por segurança */
+        html { display: none !important; }
+    </style>
+    <script>
+        // Verificação instantânea
+        if (!sessionStorage.getItem("usuarioLogado")) {
+            window.location.replace("index.html"); 
+        } else {
+            document.getElementById("trava-tela").remove();
+        }
+        window.logoutUsuario = function() {
+            sessionStorage.clear();
+            window.location.replace("index.html");
+        };
+        window.sairDoSistema = window.logoutUsuario;
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controlo | Gestão</title>
+    <link rel="icon" href="icon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- BIBLIOTECA PARA GERAR CÓDIGO DE BARRAS NAS ETIQUETAS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script type="module" src="firebase-banco.js"></script>
+    
+    <style>
+        * { font-family: 'Segoe UI', Arial, sans-serif !important; box-sizing: border-box; }
+        #userMenu { position: relative; cursor: pointer; user-select: none; }
+        #userMenuOptions { display: none; position: absolute; top: 40px; right: 0; background-color: white; min-width: 240px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); border-radius: 8px; padding: 10px 0; z-index: 9999; border: 1px solid #ddd; }
+        #userMenuOptions button { width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; cursor: pointer; font-size: 14px; color: #333; transition: background 0.2s; }
+        #userMenuOptions button:hover { background-color: #f5f5f5; }
+        #userMenu.aberto #userMenuOptions { display: block; }
+
+        .btn-voltar-universal {
+            background-color: #4b5563 !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            text-align: left !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            text-decoration: none !important;
+            transition: all 0.2s ease !important;
+            margin: 0 !important;
+        }
+        .btn-voltar-universal:hover { background-color: #374151 !important; transform: translateY(-2px); }
+
+        .modal-gp-container { 
+            max-width: 900px !important; 
+            width: 96% !important; 
+            padding: 0 !important; 
+            background: #f8fafc !important; 
+            border-radius: 8px !important; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25) !important; 
+        }
+        .gp-header { background: #ffffff; padding: 12px 18px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; border-radius: 8px 8px 0 0; }
+        .gp-header h2 { margin: 0; color: #1e293b; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+        .gp-header p { margin: 2px 0 0 28px; color: #64748b; font-size: 11px; font-weight: normal; }
+        
+        .gp-body { display: flex; flex-wrap: wrap; padding: 15px; gap: 15px; }
+        .gp-left { flex: 1.8; min-width: 300px; display: flex; flex-direction: column; gap: 12px; }
+        .gp-right { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 12px; }
+        
+        .gp-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; }
+        .gp-card-title { font-size: 13px; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }
+        
+        .gp-input-group { position: relative; width: 100%; }
+        .gp-input-group label { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-bottom: 4px; text-transform: uppercase; }
+        .gp-input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; color: #1e293b; outline: none; transition: 0.2s; background: #ffffff; }
+        .gp-input:focus { border-color: #6b7280; box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.1); }
+        
+        .gp-btn { padding: 8px 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .gp-btn-primary { background: #4b5563 !important; color: white !important; } 
+        .gp-btn-primary:hover { background: #374151 !important; }
+        .gp-btn-secondary { background: #6b7280 !important; color: white !important; } 
+        .gp-btn-secondary:hover { background: #4b5563 !important; }
+        .gp-btn-outline { background: transparent !important; border: 1px solid #9ca3af !important; color: #4b5563 !important; } 
+        .gp-btn-outline:hover { background: #f3f4f6 !important; border-color: #6b7280 !important; color: #1f2937 !important; }
+        
+        .gp-grid-2-custom { display: flex; gap: 10px; flex-wrap: wrap; }
+        .gp-grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 10px; }
+        
+        .resumo-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #e2e8f0; font-size: 12px; }
+        .resumo-item:last-child { border-bottom: none; font-size: 14px; margin-top: 5px; }
+        .resumo-label { color: #64748b; }
+        .resumo-value { font-weight: bold; color: #0f172a; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+        
+        .gp-footer { background: #f1f5f9; padding: 12px 18px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 8px 8px; }
+        .gp-footer-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        
+        .suggestions-container { 
+            position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; 
+            border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); 
+            max-height: 220px; overflow-y: auto; z-index: 999999; display: none; 
+        }
+        .suggestion-item { 
+            padding: 10px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center; font-size: 13px; transition: all 0.2s ease; 
+        }
+        .suggestion-item:hover { background-color: #f8fafc; color: #1e293b; border-left: 4px solid #4b5563; padding-left: 18px; }
+        .suggestion-item:last-child { border-bottom: none; }
+        
+        @media (max-width: 768px) { .gp-grid-4 { grid-template-columns: 1fr 1fr; } }
+    </style>
+</head>
+
+<body id="painel-body">
+
+    <header id="main-header-bar">
+        <div class="header-logo"><span id="header-nome-empresa">🛒 BEKAS BURGUER - Estoque</span></div>
+        <div class="header-actions">
+            <button id="btn-backup-export" onclick="exportarBackup()" class="btn-top">📤 Backup</button>
+            <input type="file" id="inputBackup" style="display:none" onchange="importarBackup(event)" accept=".json" />
+            <button id="btn-backup-import" onclick="document.getElementById('inputBackup').click()" class="btn-top">📥 Importar</button>
+            <button id="btn-config-index" class="settings-button admin-only btn-top" onclick="abrirModalConfigTema()">🎨 Personalizar Tema</button>
+            
+            <div id="userMenuContainerGlobal">
+                <div id="userMenu" class="menu-item btn-top" onclick="this.classList.toggle('aberto')">👤 <span id="nome-usuario-logado">Utilizador</span>
+                    <div id="userMenuOptions" class="submenu">
+                       <button id="btn-menu-conectar-firebase" onclick="abrirModalFirebase()" style="display: none;">☁️ Conectar Firebase</button>
+                        <button class="admin-only" onclick="abrirModalPermissoes()">🔐 Permissões de Acesso</button>
+                        <button class="admin-only" onclick="abrirModalSenhasSistema()">🔑 Palavras-passe do Sistema</button>
+                        <button id="btn-menu-config-emp" onclick="abrirModalConfigEmpresa()" style="display: none;">⚙️ Configurações da Empresa</button>
+                        <hr id="separador-menu-usu" style="border-color: #eee; margin: 5px 0;">
+                        <button id="btn-menu-criar-usu" onclick="abrirModalCriarUsuario()" style="display: none;">👤 Criar utilizador</button>
+                        <button id="btn-menu-editar-usu" onclick="abrirModalEditarUsuario()" style="display: none;">✏️ Editar utilizadores</button>
+                        <button id="btn-menu-excluir-usu" onclick="abrirModalExcluirUsuario()" style="display: none;">❌ Excluir utilizadores</button>
+                        <button id="btn-menu-ver-usu" onclick="abrirModalListarUsuarios()" style="display: none;">📋 Todos os utilizadores</button>
+                        <hr style="border-color: #eee; margin: 5px 0;">
+                        <button onclick="sairDoSistema()" style="color: #e74c3c; font-weight: bold;">Sair do Sistema</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <div id="alerta-firebase" style="display: none; width: 100%; max-width: 1200px; background: #f39c12; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold;">
+            ⚠️ A Base de Dados Firebase não está conectada. Clique no menu "Utilizador > Conectar Firebase".
+        </div>
+
+        <div class="dashboard-grid">
+             <div id="card-todos_produtos" class="dash-card card-lista" onclick="window.location.href='todos-produtos.html'">
+                <div class="card-icon">📦</div><h3>Todos os Produtos</h3><p>Visualizar catálogo completo</p>
+            </div>
+             <div id="card-caixa" class="dash-card card-cupons" onclick="window.location.href='caixa.html'">
+                <div class="card-icon">🧾</div><h3>Frente de Caixa</h3><p>Realizar vendas e emitir talão</p>
+            </div>
+            <div id="card-cupons" class="dash-card card-cupons" onclick="window.location.href='cupons.html'">
+                <div class="card-icon">🏷️</div><h3>Gerenciar Comandas</h3><p>Reimprimir ou cancelar recibos</p>
+            </div>
+            <div id="card-cozinha" class="dash-card card-alerta" style="border-left-color: #e67e22; display: none;" onclick="window.location.href='cozinha.html'">
+                <div class="card-icon">👨‍🍳</div><h3>Monitor da Cozinha</h3><p>Acompanhar pedidos (KDS)</p>
+            </div>
+            <div id="card-fiado" class="dash-card card-alerta" style="border-left-color: #c2185b;" onclick="window.location.href='clientes.html'">
+                <div class="card-icon">📒</div><h3>Gestão de Clientes</h3><p>Contas correntes e Clube Fidelidade</p>
+            </div>
+            <div id="card-gerenciar_produto" class="dash-card card-estoque" onclick="abrirModalGerenciarProduto()">
+                <div class="card-icon">🔄</div><h3>Gerenciar Produto</h3><p>Consultar qtd, cadastrar e etiquetas</p>
+            </div>
+            <div id="card-fim_estoque" class="dash-card card-alerta" onclick="window.location.href='fim_estoque.html'">
+                <div class="card-icon">⚠️</div><h3>Fim de Estoque</h3><p>Relatório de produtos esgotando</p>
+            </div>
+            <div id="card-faturamento" class="dash-card card-financeiro" onclick="window.location.href='faturamento.html'">
+                <div class="card-icon">💰</div><h3>Faturamento Líquido</h3><p>Painel de lucros e despesas</p>
+            </div>
+            <div id="card-relatorio" class="dash-card card-relatorio" onclick="window.location.href='relatorio.html'">
+                <div class="card-icon">📅</div><h3>Relatório Diário</h3><p>Resumo de caixa do dia</p>
+            </div>
+        </div>
+
+        <div id="zona-apagar-tudo" style="display: none; margin-top: 40px; text-align: center;">
+            <button onclick="confirmarApagarDados()" style="background:#e74c3c; color:white; padding:12px 25px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 6px rgba(231,76,60,0.3);">🗑️ Apagar Todos os Registros do Sistema</button>
+        </div>
+    </main>
+
+    <footer class="system-footer" id="main-footer-bar"><p>© 2026 - Sistema de Controlo de Estoque</p></footer>
+
+    <!-- MODAL DE ALERTAS CUSTOMIZADOS DO SISTEMA.HTML -->
+    <div id="modalAlertaCustom" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000000;">
+        <div class="modal-content" style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center;">
+            <h2 id="tituloAlertaCustom" style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #9ca3af; padding-bottom: 10px;">Aviso</h2>
+            <p id="mensagemAlertaCustom" style="font-size: 15px; color: #333; margin: 20px 0; font-weight: bold;"></p>
+            <button onclick="fecharModalPersonalizado('modalAlertaCustom')" class="gp-btn gp-btn-primary" style="width: 100%;">OK</button>
+        </div>
+    </div>
+
+    <!-- MODAL ISOLADO PARA PALAVRA-PASSE MASTER -->
+    <div id="modalSenhaMasterIsolado" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100001;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 380px; text-align: center;">
+            <h3 style="color: #1e293b; margin-top: 0;">🔑 Palavra-passe Master</h3>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Este produto já existe. Insira a palavra-passe master para autorizar a alteração:</p>
+            <input type="password" id="inputSenhaMasterIsolado" class="gp-input" placeholder="Palavra-passe..." style="margin-bottom: 20px; text-align: center; font-size: 16px;" onkeypress="if(event.key === 'Enter') confirmarSenhaMasterIsolado()">
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="cancelarSenhaMasterIsolado()" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="confirmarSenhaMasterIsolado()" class="gp-btn gp-btn-primary" style="flex: 1;">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SELEÇÃO MÚLTIPLA PARA IMPRESSÃO A4 EM LOTE -->
+    <div id="modalEtiquetasLote" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100000;">
+        <div class="modal-content" style="background: white; padding: 25px; border-radius: 10px; width: 90%; max-width: 650px; max-height: 85vh; display: flex; flex-direction: column;">
+            <h3 style="color: #1e293b; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">🖨️ Selecionar Produtos para Impressão A4 (Lote)</h3>
+            <p style="font-size: 12px; color: #64748b;">Marque os produtos que deseja incluir na folha de etiquetas adesivas A4:</p>
+            <div id="listaCheckProdutosLote" style="flex: 1; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; margin: 15px 0; background: #f8fafc; text-align: left;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="document.getElementById('modalEtiquetasLote').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Fechar</button>
+                <button type="button" onclick="executarImpressaoLoteA4()" class="gp-btn gp-btn-primary" style="flex: 2;">🖨️ Imprimir Folha A4 Selecionados</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FIREBASE -->
+    <div id="modalFirebase" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px;">
+            <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #f39c12; padding-bottom: 10px;">☁️ Conectar Banco de Dados</h2>
+            <textarea id="firebaseConfigInput" rows="10" placeholder='Cole seu código JSON aqui' style="width: 100%; padding: 10px; margin-top: 15px; border-radius: 6px; border: 1px solid #ccc; font-family: monospace; font-size: 12px; resize: vertical;"></textarea>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('modalFirebase').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="salvarConfigFirebase()" class="gp-btn gp-btn-primary" style="flex: 1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PERMISSÕES -->
+    <div id="modalPermissoes" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-top: 0;">🔐 Permissões de Acesso</h2>
+            <label style="display: block; margin-top: 15px; font-weight: bold; color: #555;">Selecione o Utilizador:</label>
+            <select id="selectUsuarioPermissao" onchange="carregarPermissoesUsuario()" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px;"></select>
+            
+            <div id="listaPermissoes" style="margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #eee; display: none;">
+                <p style="font-size: 13px; color: #777; margin-bottom: 10px;"><b>Acesso a Ecrãs:</b></p>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-conectar_firebase"> ☁️ Conectar Firebase</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-caixa"> 🧾 Frente de Caixa</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-cupons"> 🏷️ Gerenciar Cupons</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-cozinha"> 👨‍🍳 Monitor da Cozinha</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-fidelidade"> ⭐ Clube Fidelidade</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-fiado"> 💳 Conta Corrente / Crediário</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-gerenciar_produto"> 🔄 Gerenciar Produto</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-todos_produtos"> 📦 Todos os Produtos</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-fim_estoque"> ⚠️ Fim de Estoque</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-faturamento"> 💰 Faturamento Líquido</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-relatorio"> 📅 Relatório Diário</label>
+                
+                <hr style="border: 0; border-top: 1px solid #ccc; margin: 15px 0;">
+                <p style="font-size: 13px; color: #777; margin-bottom: 10px;"><b>Controles do Sistema:</b></p>
+                <label style="display: block; margin-bottom: 8px; color: #e74c3c;"><input type="checkbox" id="perm-apagar_tudo"> 🗑️ Apagar Todos os Dados</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-config_empresa"> ⚙️ Configurações da Empresa</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-criar_usuario"> 👤 Criar Usuários</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-editar_usuario"> ✏️ Editar Usuários</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-excluir_usuario"> ❌ Excluir Usuários</label>
+                <label style="display: block; margin-bottom: 8px;"><input type="checkbox" id="perm-ver_usuarios"> 📋 Ver Todos os Usuários</label>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('modalPermissoes').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="salvarPermissoesUsuario()" class="gp-btn gp-btn-primary" style="flex: 1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SENHAS DO SISTEMA -->
+    <div id="modalSenhasSistema" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 450px;">
+            <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">🔑 Senhas do Sistema</h2>
+            <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Aqui você altera as senhas das ações restritas do sistema.</p>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Senha Master (Desconto, Cancelar Cupom, Apagar Dados):</label>
+            <input type="text" id="senha-sys-master" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Senha Cancelar Item (Na Venda do Caixa):</label>
+            <input type="text" id="senha-sys-cancelar" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Senha para Fechar o Caixa:</label>
+            <input type="text" id="senha-sys-fechar" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 20px;">
+            <div style="display: flex; gap: 15px;">
+                <button type="button" onclick="document.getElementById('modalSenhasSistema').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="salvarSenhasSistema()" class="gp-btn gp-btn-primary" style="flex: 1;">Salvar Senhas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIGURAÇÕES DA EMPRESA -->
+    <div id="modalConfigEmpresa" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto;">
+            <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #8e44ad; padding-bottom: 10px;">⚙️ Configurações da Empresa</h2>
+            <div style="margin-top: 20px; font-size: 15px; color: #333;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nome do Sistema (Cabeçalho):</label>
+                <input type="text" id="emp-nome-cabecalho" placeholder="Ex: 🛒 Meu Negócio" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 15px;">
+                
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">Tamanho da Impressora (Papel):</label>
+                <select id="emp-tamanho-impressora" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 15px;">
+                    <option value="58">Bobina 58mm (Pequena)</option>
+                    <option value="80">Bobina 80mm (Grande)</option>
+                </select>
+
+                <div style="background: #fdf2e9; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 10px; cursor: pointer; color: #4b5563; font-weight: bold;">
+                        <input type="checkbox" id="emp-usar-fidelidade" onchange="toggleFidelidadeConfig()" style="transform: scale(1.2); margin-right: 8px;"> ⭐ Habilitar Clube Fidelidade
+                    </label>
+                    <div id="config-fidelidade-opcoes" style="display: none; margin-top: 10px;">
+                        <label style="font-size: 13px; font-weight: bold;">Meta de Compras para o Brinde:</label>
+                        <input type="number" id="emp-fidelidade-meta" value="10" min="1" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                        <label style="font-size: 13px; font-weight: bold;">Produto do Brinde:</label>
+                        <select id="emp-fidelidade-brinde" style="width: 100%; padding: 8px; border-radius: 5px; border: 1px solid #ccc;"></select>
+                    </div>
+                </div>
+
+                <label style="display: block; margin-bottom: 15px; cursor: pointer;"><input type="checkbox" id="emp-usar-fiado" style="transform: scale(1.2); margin-right: 10px;"> Habilitar Gestão de Clientes (Crediário)</label>
+                <label style="display: block; margin-bottom: 15px; cursor: pointer;"><input type="checkbox" id="emp-usar-numero-pedido" style="transform: scale(1.2); margin-right: 10px;"> Imprimir Número do Pedido no Cupom</label>
+                <label style="display: block; margin-bottom: 15px; cursor: pointer;"><input type="checkbox" id="emp-usar-monitor-cozinha" style="transform: scale(1.2); margin-right: 10px;"> Habilitar Monitor da Cozinha (KDS)</label>
+                <label style="display: block; margin-bottom: 15px; cursor: pointer;"><input type="checkbox" id="emp-usar-backup" style="transform: scale(1.2); margin-right: 10px;"> Habilitar botões de Backup e Importação</label>
+                <label style="display: block; margin-bottom: 15px; cursor: pointer;"><input type="checkbox" id="emp-usar-modal-cliente" style="transform: scale(1.2); margin-right: 10px;"> Mostrar tela de 'Nome / Observação' no Caixa</label>
+                
+                <label style="display: block; margin-bottom: 15px; cursor: pointer; color: #059669; font-weight: bold;">
+                    <input type="checkbox" id="emp-usar-busca-nome" style="transform: scale(1.2); margin-right: 10px;"> 🔎 Permitir Passar Produtos por Nome no Caixa
+                </label>
+
+                <!-- OPÇÃO DO QR CODE DO PIX -->
+                <label style="display: block; margin-bottom: 15px; cursor: pointer; color: #0284c7; font-weight: bold;">
+                    <input type="checkbox" id="emp-usar-qr-pix" style="transform: scale(1.2); margin-right: 10px;" onchange="document.getElementById('config-qr-pix').style.display = this.checked ? 'block' : 'none'"> 💠 Exibir QR Code Pix no Caixa
+                </label>
+                <div id="config-qr-pix" style="display: none; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px dashed #0284c7; margin-bottom: 15px;">
+                    <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Imagem do QR Code (Sua chave Pix):</label>
+                    <input type="file" id="input-qr-pix" accept="image/*" style="width: 100%; margin-bottom: 10px; font-size: 12px; background: white; padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" class="gp-btn gp-btn-secondary" onclick="salvarImagemQRPix()" style="flex: 1; padding: 8px;">💾 Salvar QR Code</button>
+                        <button type="button" class="gp-btn gp-btn-outline" onclick="removerImagemQRPix()" style="flex: 1; padding: 8px; color: #e74c3c !important; border-color: #e74c3c !important;">🗑️ Remover</button>
+                    </div>
+                    <p id="status-qr-pix" style="font-size: 12px; color: #059669; font-weight: bold; margin-top: 10px; display: none;">✔️ QR Code configurado e ativo!</p>
+                </div>
+
+                <!-- OPÇÃO DE AVISO DE ESTOQUE (MODAL) -->
+                <label style="display: block; margin-bottom: 15px; cursor: pointer; color: #d35400; font-weight: bold;">
+                    <input type="checkbox" id="emp-usar-aviso-estoque" style="transform: scale(1.2); margin-right: 10px;"> ⚠️ Exibir Aviso de Estoque Baixo no Caixa
+                </label>
+
+                <!-- OPÇÃO DE ESTOQUE NEGATIVO -->
+                <div style="background: #fdfdfd; padding: 10px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; cursor: pointer; color: #c0392b; font-weight: bold;">
+                        <input type="checkbox" id="emp-usar-estoque-negativo" style="transform: scale(1.2); margin-right: 10px;"> 📉 Permitir Venda com Estoque Negativo
+                    </label>
+                    <p style="font-size: 11px; color: #666; margin: 0; padding-left: 25px;">Se ativado, o caixa permitirá passar produtos mesmo com o estoque zerado.</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('modalConfigEmpresa').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="salvarConfigEmpresa()" class="gp-btn gp-btn-primary" style="flex: 1;">Salvar Configurações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CRIAR USUÁRIO -->
+    <div id="modal-criar-usuario" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px;">
+            <h3 style="margin-top: 0; color: #2c3e50;">👤 Criar Usuário</h3>
+            <input type="text" id="novo-usuario-nome" placeholder="Nome do Usuário" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <input type="password" id="novo-usuario-senha" placeholder="Senha" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="button" onclick="document.getElementById('modal-criar-usuario').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="criarUsuario()" class="gp-btn gp-btn-primary" style="flex: 1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL EXCLUIR USUÁRIO -->
+    <div id="modal-excluir-usuario" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px;">
+            <h3 style="margin-top: 0; color: #e74c3c;">🗑️ Excluir Usuário</h3>
+            <select id="select-excluir-usuario" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc;"></select>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="button" onclick="document.getElementById('modal-excluir-usuario').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="excluirUsuario()" class="gp-btn" style="flex: 1; background: #e74c3c; color: white;">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR USUÁRIO -->
+    <div id="modal-editar-usuario" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px;">
+            <h3 style="margin-top: 0; color: #34495e;">✏️ Editar Usuário</h3>
+            <select id="select-editar-usuario" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc;"></select>
+            <input type="text" id="editar-usuario-nova-senha" placeholder="Nova Senha" style="width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc;">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="button" onclick="document.getElementById('modal-editar-usuario').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="editarUsuario()" class="gp-btn gp-btn-primary" style="flex: 1;">Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LISTAR USUÁRIOS -->
+    <div id="modal-listar-usuarios" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px;">
+            <h3 style="margin-top: 0; color: #2980b9;">📋 Todos os Usuários e Senhas</h3>
+            <div id="lista-de-usuarios-cadastrados" style="margin-top: 10px; max-height: 250px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #eee; border-radius: 5px;"></div>
+            <button type="button" onclick="document.getElementById('modal-listar-usuarios').style.display='none'" class="gp-btn gp-btn-outline" style="width: 100%; margin-top: 15px;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAIS RESTAURAÇÃO E EXCLUSÃO -->
+    <div id="modal-confirm-import" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10005;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center;">
+            <h1 style="font-size: 40px; margin: 0; color: #e74c3c;">🚨</h1>
+            <h3 style="color: #e74c3c; margin-top: 10px;">ATENÇÃO</h3>
+            <p style="font-size: 15px; color: #333; margin-bottom: 20px;">A importação substituirá 100% dos dados, configurações, senhas e plano de fundo. Continuar?</p>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="document.getElementById('modal-confirm-import').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="executarImportacao()" class="gp-btn" style="flex: 1; background: #e74c3c; color: white;">Sim, Importar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-sucesso-import" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 10006;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center;">
+            <h1 style="font-size: 50px; margin: 0; color: #27ae60;">✅</h1>
+            <h3 style="color: #27ae60; margin-top: 10px;">Sucesso!</h3>
+            <p style="font-size: 15px; color: #333; margin-bottom: 20px;">Sistema restaurado com sucesso!</p>
+            <button type="button" onclick="window.location.reload()" class="gp-btn gp-btn-primary" style="width: 100%;">OK (Recarregar)</button>
+        </div>
+    </div>
+
+    <div id="modal-confirm-apagar" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 10005;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center;">
+            <h1 style="font-size: 40px; margin: 0; color: #c0392b;">🚨</h1>
+            <h3 style="color: #c0392b; margin-top: 10px;">CUIDADO!</h3>
+            <p style="font-size: 15px; color: #333; margin-bottom: 20px;">Isto apagará TODOS os registos de vendas, produtos, clientes fidelidade, pedidos da cozinha e utilizadores (exceto Admin). Tem certeza absoluta?</p>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="document.getElementById('modal-confirm-apagar').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="pedirSenhaApagar()" class="gp-btn" style="flex: 1; background: #c0392b; color: white;">Sim, Apagar Tudo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-senha-apagar" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 10006;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center;">
+            <h3 style="color: #c0392b; margin-top: 0;">🔑 Palavra-passe Master</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Digite a palavra-passe master para confirmar a exclusão total:</p>
+            <input type="password" id="input-senha-apagar" placeholder="Palavra-passe Master" onkeypress="if(event.key === 'Enter') executarApagarDados()" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 20px; text-align: center;">
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="document.getElementById('modal-senha-apagar').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="executarApagarDados()" class="gp-btn" style="flex: 1; background: #c0392b; color: white;">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalBloqueioLocal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px;">
+            <h2 style="color: #e74c3c; margin-top: 0; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;">🔒 Controlo da Tela</h2>
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #e74c3c; font-weight: bold; font-size:16px; margin-top: 15px; background: #fdf2e9; padding: 10px; border-radius: 6px;">
+                <input type="checkbox" id="check-bloquear-local" style="width: 20px; height: 20px;"> TRAVAR TELA PARA TODOS OS UTILIZADORES
+            </label>
+            <label style="display: block; margin-top: 15px; font-weight: bold;">Mensagem na Tela:</label>
+            <textarea id="texto-bloqueio-local" rows="3" placeholder="Ex: Manutenção rápida. Voltamos em 5 min." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-top: 5px; resize:none;"></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" onclick="document.getElementById('modalBloqueioLocal').style.display='none'" class="gp-btn gp-btn-outline" style="flex: 1;">Cancelar</button>
+                <button type="button" onclick="salvarBloqueioLocal()" class="gp-btn" style="flex: 1; background: #e74c3c; color: white;">Aplicar Restrição</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-sucesso-apagar" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 10006;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 350px; text-align: center;">
+            <h1 style="font-size: 50px; margin: 0; color: #27ae60;">✅</h1>
+            <h3 style="color: #27ae60; margin-top: 10px;">Sistema Resetado!</h3>
+            <p style="font-size: 15px; color: #333; margin-bottom: 20px;">Tudo foi apagado com sucesso.</p>
+            <button type="button" onclick="window.location.reload()" class="gp-btn gp-btn-primary" style="width: 100%;">OK (Recarregar)</button>
+        </div>
+    </div>
+
+    <!-- MODAL PERSONALIZAR TEMA -->
+    <div id="modal-configuracoes-tema" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 450px;">
+            <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">🎨 Personalizar Tema</h2>
+            <label style="display:block; margin-top:15px; font-weight:bold; color:#555;">Cor do Cabeçalho e Rodapé:</label>
+            <input type="color" id="cor-fundo-header" style="width: 100%; height: 45px; margin-top: 5px; border:1px solid #ccc; border-radius: 5px; cursor: pointer;">
+            <label style="display:block; margin-top:15px; font-weight:bold; color:#555;">Cor do Texto do Cabeçalho:</label>
+            <input type="color" id="cor-texto-header" style="width: 100%; height: 45px; margin-top: 5px; border:1px solid #ccc; border-radius: 5px; cursor: pointer;">
+            <label style="display:block; margin-top:15px; font-weight:bold; color:#555;">Cor de Fundo da Tela Geral:</label>
+            <input type="color" id="cor-fundo-body" style="width: 100%; height: 45px; margin-top: 5px; border:1px solid #ccc; border-radius: 5px; cursor: pointer;">
+            <label style="display:block; margin-top:15px; font-weight:bold; color:#555;">Transparência dos Cards de Menu:</label>
+            <input type="range" id="transparencia-cards" min="0.5" max="1" step="0.05" value="1" style="width: 100%; margin-top: 10px; cursor: pointer;">
+            <button type="button" onclick="salvarCoresTema()" class="gp-btn gp-btn-primary" style="width: 100%; margin-top: 15px;">✔️ Aplicar Cores e Opacidade</button>
+            <hr style="margin: 25px 0; border: 0; border-top: 1px solid #ddd;">
+            <label style="display:block; font-weight:bold; color:#555;">Imagem de Fundo (Wallpaper):</label>
+            <input type="file" id="input-fundo-tela" accept="image/*" style="width: 100%; margin-top: 5px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="button" onclick="salvarImagemFundo()" class="gp-btn gp-btn-secondary" style="flex: 1;">🖼️ Definir Imagem</button>
+                <button type="button" onclick="removerImagemFundo()" class="gp-btn gp-btn-outline" style="flex: 1;">🗑️ Limpar Imagem</button>
+            </div>
+            <button type="button" onclick="fecharModalPersonalizado('modal-configuracoes-tema')" class="gp-btn gp-btn-outline" style="width: 100%; margin-top: 25px;">Fechar Janela</button>
+        </div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- MODAL PROFISSIONAL COMPACTO: GERENCIAR PRODUTO         -->
+    <!-- ====================================================== -->
+    <div id="modalRegistrarProdutoSistema" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content modal-gp-container">
+            
+            <div class="gp-header">
+                <div>
+                    <h2><span style="background: #f1f5f9; padding: 6px; border-radius: 6px; display: flex;">📦</span> Gestão de Produtos</h2>
+                    <p>Cadastre, edite e pesquise os seus produtos de forma simples e rápida.</p>
+                </div>
+                <button class="btn-voltar-universal" onclick="fecharModalPersonalizado('modalRegistrarProdutoSistema')">⬅ Voltar</button>
+            </div>
+
+            <div class="gp-body">
+                <div class="gp-left">
+                    <div class="gp-card">
+                        <div class="gp-grid-2-custom">
+                            <!-- CÓDIGO DE BARRAS -->
+                            <div class="gp-input-group" style="flex: 1; min-width: 220px; max-width: 280px;">
+                                <label>Código de Barras / Referência</label>
+                                <div class="gp-input-control" style="flex-direction: column; gap: 8px;">
+                                    <input type="text" id="newBarcodeModal" class="gp-input" style="font-weight: bold;" placeholder="Código..." onkeypress="if(event.key === 'Enter') buscarProdutoUnified()" oninput="document.getElementById('resumo-codigo').innerText = this.value || '-'">
+                                    <div style="display: flex; gap: 8px; width: 100%;">
+                                        <button type="button" class="gp-btn gp-btn-secondary" style="flex: 1; white-space: nowrap; padding: 8px 5px;" onclick="buscarProdutoUnified()">🔍 Buscar</button>
+                                        <button type="button" class="gp-btn gp-btn-secondary" style="flex: 1; white-space: nowrap; padding: 8px 5px;" onclick="gerarCodigoBarras('newBarcodeModal'); document.getElementById('resumo-codigo').innerText = document.getElementById('newBarcodeModal').value;">🎲 Aleatório</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- NOME DO PRODUTO (COM LEQUE) -->
+                            <div class="gp-input-group" style="flex: 2; min-width: 250px; position: relative;">
+                                <label>Buscar Produto por Nome</label>
+                                <input type="text" id="newNameModal" class="gp-input" autocomplete="off" placeholder="Digite o nome..." onkeydown="handleNameEnter(event)" oninput="pesquisarProdutosPorNomeRealTime(this.value); document.getElementById('resumo-nome').innerText = this.value || '-'">
+                                <div id="lista-sugestoes-produtos" class="suggestions-container"></div>
+                            </div>
+                        </div>
+
+                        <!-- VALORES E QUANTIDADE -->
+                        <div class="gp-grid-4" style="margin-top: 10px;">
+                            <div class="gp-input-group">
+                                <label>Estoque</label>
+                                <input type="number" id="newStockModal" class="gp-input" style="font-weight: bold;" value="1" min="0" oninput="document.getElementById('resumo-estoque').innerText = this.value || '0'">
+                            </div>
+                            <div class="gp-input-group">
+                                <label>Custo (R$)</label>
+                                <input type="number" id="newCostModal" class="gp-input" style="background: #f8fafc;" step="0.01" placeholder="0.00" oninput="calcularPrecoVenda('new')">
+                            </div>
+                            <div class="gp-input-group">
+                                <label>Margem (%)</label>
+                                <input type="number" id="newMarginModal" class="gp-input" style="background: #f8fafc;" step="0.01" placeholder="0.0" oninput="calcularPrecoVenda('new')">
+                            </div>
+                            <div class="gp-input-group">
+                                <label>Preço Venda (R$)</label>
+                                <input type="number" id="newPriceModal" class="gp-input" step="0.01" placeholder="0.00" style="font-size: 14px; font-weight: bold; background: #f1f5f9; border-color: #94a3b8;" oninput="calcularMargemLucro('new'); document.getElementById('resumo-valor').innerText = parseFloat(this.value || 0).toFixed(2)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL DIREITO: RESUMO E IMPRESSÃO EM LOTE -->
+                <div class="gp-right">
+                    <div class="gp-card" style="background: #f8fafc; padding: 10px 15px;">
+                        <h3 class="gp-card-title" style="margin-bottom: 5px;">📝 Resumo do Produto</h3>
+                        <div>
+                            <div class="resumo-item"><span class="resumo-label">🏷️ Nome:</span><span class="resumo-value" id="resumo-nome">-</span></div>
+                            <div class="resumo-item"><span class="resumo-label">🔢 Código:</span><span class="resumo-value" id="resumo-codigo">-</span></div>
+                            <div class="resumo-item"><span class="resumo-label">📦 Estoque:</span><span class="resumo-value" id="resumo-estoque">1</span></div>
+                            <div class="resumo-item"><span class="resumo-label" style="font-weight: bold;">💲 Valor:</span><span class="resumo-value" style="font-size: 16px;">R$ <span id="resumo-valor">0.00</span></span></div>
+                        </div>
+                    </div>
+
+                    <div class="gp-card" style="padding: 10px 15px;">
+                        <h3 class="gp-card-title" style="margin-bottom: 8px;">🖨️ Etiquetas</h3>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="gp-btn gp-btn-outline" style="flex: 1;" onclick="imprimirEtiquetaPreco('newBarcodeModal', 'newNameModal', 'newPriceModal')">🛒 Preço Un.</button>
+                                <button type="button" class="gp-btn gp-btn-outline" style="flex: 1;" onclick="imprimirEtiquetaCodigo('newBarcodeModal', 'newNameModal')">||| Cód. Un.</button>
+                            </div>
+                            <button type="button" class="gp-btn gp-btn-secondary" style="width: 100%; margin-top: 4px;" onclick="abrirModalSelecaoLoteA4()">
+                                📄 Imprimir Múltiplos (Folha A4 Lote)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gp-footer">
+                <button type="button" class="gp-btn gp-btn-outline" onclick="abrirModalGerenciarProduto()" title="Limpar Formulário">🔄 Limpar</button>
+                <div class="gp-footer-actions">
+                    <button type="button" class="gp-btn gp-btn-outline" onclick="fecharModalPersonalizado('modalRegistrarProdutoSistema')">✕ Cancelar</button>
+                    <button type="button" class="gp-btn gp-btn-primary" id="btnSalvarUnified" onclick="tentarSalvarProduto()" style="padding: 8px 20px;">💾 Salvar Produto</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IFRAME INVISÍVEL PARA IMPRESSÃO NO .EXE -->
+    <iframe id="iframe-impressao" style="display:none;"></iframe>
+
+    <script src="script.js"></script>
+    <script>
+        function abrirModal(id) { var modal = document.getElementById(id); if (modal) modal.style.display = 'flex'; }
+        function fecharModalPersonalizado(id) { 
+            var modal = document.getElementById(id);
+            if (modal) modal.style.display = 'none';
+            var listaSugestoes = document.getElementById('lista-sugestoes-produtos');
+            if (listaSugestoes) listaSugestoes.style.display = 'none';
+        }
+        function mostrarAlerta(mensagem, titulo = "Aviso") {
+            if (typeof window.mostrarAlertaGlobal === 'function') {
+                window.mostrarAlertaGlobal(mensagem, titulo);
+            } else {
+                let tituloEl = document.getElementById("tituloAlertaCustom");
+                let msgEl = document.getElementById("mensagemAlertaCustom");
+                let modalEl = document.getElementById("modalAlertaCustom");
+                if (tituloEl && msgEl && modalEl) {
+                    tituloEl.innerText = titulo;
+                    msgEl.innerText = mensagem;
+                    modalEl.style.display = "flex";
+                } else {
+                    alert(mensagem);
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var elUser = document.getElementById("nome-usuario-logado");
+            if (elUser) elUser.textContent = sessionStorage.getItem("usuarioLogado") || "Admin";
+            var isAdmin = sessionStorage.getItem("userRole") === "admin";
+            document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = isAdmin ? 'block' : 'none'; });
+        });
+
+        function abrirModalGerenciarProduto() {
+            document.getElementById('modalRegistrarProdutoSistema').style.display = 'flex';
+            document.getElementById('newBarcodeModal').value = '';
+            document.getElementById('newNameModal').value = '';
+            document.getElementById('newStockModal').value = '1';
+            document.getElementById('newCostModal').value = '';
+            document.getElementById('newMarginModal').value = '';
+            document.getElementById('newPriceModal').value = '';
+            document.getElementById('lista-sugestoes-produtos').style.display = 'none';
+            
+            document.getElementById('resumo-nome').innerText = '-';
+            document.getElementById('resumo-codigo').innerText = '-';
+            document.getElementById('resumo-estoque').innerText = '1';
+            document.getElementById('resumo-valor').innerText = '0.00';
+            
+            let btnSalvar = document.getElementById('btnSalvarUnified');
+            btnSalvar.innerText = '💾 Salvar Produto';
+            btnSalvar.className = 'gp-btn gp-btn-primary';
+            setTimeout(() => document.getElementById('newBarcodeModal').focus(), 100);
+        }
+
+        function handleNameEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); 
+                var lista = document.getElementById('lista-sugestoes-produtos');
+                if (lista.style.display === 'block') {
+                    var itens = lista.getElementsByClassName('suggestion-item');
+                    if (itens.length > 0) itens[0].click(); 
+                } else {
+                    document.getElementById('newStockModal').focus(); 
+                }
+            }
+        }
+
+        function pesquisarProdutosPorNomeRealTime(termo) {
+            let container = document.getElementById('lista-sugestoes-produtos');
+            termo = termo.trim().toLowerCase();
+            if (!termo || termo.length < 2) { container.style.display = 'none'; container.innerHTML = ''; return; }
+
+            let produtos = window.obterDados ? window.obterDados("produtos") : {};
+            let encontrados = [];
+            Object.keys(produtos).forEach(codigo => {
+                let p = produtos[codigo];
+                if (p.nome && p.nome.toLowerCase().includes(termo)) encontrados.push({ codigo: codigo, p: p });
+            });
+
+            if (encontrados.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+
+            container.innerHTML = '';
+            encontrados.forEach(item => {
+                let div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<div class="suggestion-info"><span class="suggestion-name">${item.p.nome}</span><span class="suggestion-details">Cód: ${item.codigo} | Estoque: ${item.p.quantidade || 0} un</span></div><strong>R$ ${(parseFloat(item.p.valor) || 0).toFixed(2)}</strong>`;
+                div.onclick = function() { selecionarProdutoDaLista(item.codigo, item.p); };
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        }
+
+        function selecionarProdutoDaLista(codigo, p) {
+            document.getElementById("newBarcodeModal").value = codigo;
+            document.getElementById("newNameModal").value = p.nome || '';
+            document.getElementById("newStockModal").value = p.quantidade || 0;
+            document.getElementById("newCostModal").value = p.custo || '';
+            document.getElementById("newMarginModal").value = p.margem || '';
+            document.getElementById("newPriceModal").value = p.valor || '';
+            
+            document.getElementById('resumo-codigo').innerText = codigo || '-';
+            document.getElementById('resumo-nome').innerText = p.nome || '-';
+            document.getElementById('resumo-estoque').innerText = p.quantidade || '0';
+            document.getElementById('resumo-valor').innerText = parseFloat(p.valor || 0).toFixed(2);
+            
+            let btnSalvar = document.getElementById('btnSalvarUnified');
+            btnSalvar.innerText = '🔄 Atualizar Estoque/Dados';
+            btnSalvar.className = 'gp-btn gp-btn-dark'; 
+            document.getElementById('lista-sugestoes-produtos').style.display = 'none';
+        }
+
+        function buscarProdutoUnified() {
+            var codigo = document.getElementById("newBarcodeModal").value.trim();
+            if (!codigo) { mostrarAlerta("⚠️ Digite ou bipe um código de barras para procurar.", "Atenção"); return; }
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            
+            if (produtos && produtos[codigo]) {
+                var p = produtos[codigo];
+                document.getElementById("newNameModal").value = p.nome || '';
+                document.getElementById("newStockModal").value = p.quantidade || 0;
+                document.getElementById("newCostModal").value = p.custo || '';
+                document.getElementById("newMarginModal").value = p.margem || '';
+                document.getElementById("newPriceModal").value = p.valor || '';
+                
+                document.getElementById('resumo-codigo').innerText = codigo || '-';
+                document.getElementById('resumo-nome').innerText = p.nome || '-';
+                document.getElementById('resumo-estoque').innerText = p.quantidade || '0';
+                document.getElementById('resumo-valor').innerText = parseFloat(p.valor || 0).toFixed(2);
+                
+                let btnSalvar = document.getElementById('btnSalvarUnified');
+                btnSalvar.innerText = '🔄 Atualizar Estoque/Dados';
+                btnSalvar.className = 'gp-btn gp-btn-dark';
+                mostrarAlerta(`✅ Produto encontrado!\nQuantidade em estoque: ${p.quantidade || 0} un.`, "Produto Localizado");
+            } else {
+                document.getElementById("newNameModal").value = '';
+                document.getElementById("newStockModal").value = '1';
+                document.getElementById("newCostModal").value = '';
+                document.getElementById("newMarginModal").value = '';
+                document.getElementById("newPriceModal").value = '';
+                
+                document.getElementById('resumo-codigo').innerText = codigo || '-';
+                document.getElementById('resumo-nome').innerText = '-';
+                document.getElementById('resumo-estoque').innerText = '1';
+                document.getElementById('resumo-valor').innerText = '0.00';
+                
+                let btnSalvar = document.getElementById('btnSalvarUnified');
+                btnSalvar.innerText = '💾 Salvar Novo Produto';
+                btnSalvar.className = 'gp-btn gp-btn-primary';
+                mostrarAlerta("ℹ️ Produto não cadastrado. Preencha as informações para registar.", "Novo Produto");
+            }
+        }
+
+        // FUNÇÃO DE TENTAR SALVAR (CHAMA O MODAL DE SENHA ISOLADO SE EXISTIR)
+        function tentarSalvarProduto() {
+            var codigo = document.getElementById("newBarcodeModal").value.trim();
+            var nome = document.getElementById("newNameModal").value.trim();
+            var venda = parseFloat(document.getElementById("newPriceModal").value) || 0;
+            if (!codigo || !nome || venda <= 0) { mostrarAlerta("⚠️ Preencha o Código, Nome e Preço de Venda válido.", "Atenção"); return; }
+
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            if (produtos && produtos[codigo]) {
+                document.getElementById("inputSenhaMasterIsolado").value = "";
+                document.getElementById("modalSenhaMasterIsolado").style.display = "flex";
+                setTimeout(() => document.getElementById("inputSenhaMasterIsolado").focus(), 100);
+            } else {
+                executarSalvamentoDefinitivo();
+            }
+        }
+
+        function cancelarSenhaMasterIsolado() {
+            document.getElementById("modalSenhaMasterIsolado").style.display = "none";
+        }
+
+        function confirmarSenhaMasterIsolado() {
+            var senhaDigitada = document.getElementById("inputSenhaMasterIsolado").value;
+            var senhasSys = window.obterDados ? window.obterDados("senhasSistema") : null;
+            var senhaCorreta = senhasSys ? senhasSys.master : "1996"; 
+
+            if (senhaDigitada !== senhaCorreta) {
+                mostrarAlerta("⚠️ Palavra-passe Master Incorreta!", "Acesso Negado");
+                return;
+            }
+            document.getElementById("modalSenhaMasterIsolado").style.display = "none";
+            executarSalvamentoDefinitivo();
+        }
+
+        function executarSalvamentoDefinitivo() {
+            var codigo = document.getElementById("newBarcodeModal").value.trim();
+            var nome = document.getElementById("newNameModal").value.trim();
+            var qtd = parseInt(document.getElementById("newStockModal").value) || 0;
+            var custo = parseFloat(document.getElementById("newCostModal").value) || 0;
+            var margem = parseFloat(document.getElementById("newMarginModal").value) || 0;
+            var venda = parseFloat(document.getElementById("newPriceModal").value) || 0;
+
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            if (!produtos) produtos = {};
+            var isUpdate = !!produtos[codigo];
+
+            produtos[codigo] = { nome: nome, quantidade: qtd, custo: custo, margem: margem, valor: venda };
+            if (window.salvarDados) window.salvarDados("produtos", produtos);
+            
+            mostrarAlerta(isUpdate ? "✅ Estoque e dados atualizados com sucesso!" : "✅ Produto registado com sucesso!", "Sucesso");
+            fecharModalPersonalizado('modalRegistrarProdutoSistema');
+            if (window.isBancoPronto) document.dispatchEvent(new Event("dadosAtualizados"));
+        }
+
+        function gerarCodigoBarras(inputId) {
+            var codigo = Math.floor(Math.random() * 899999999999) + 100000000000;
+            document.getElementById(inputId).value = codigo;
+        }
+
+        function calcularPrecoVenda(prefix) {
+            var custo = parseFloat(document.getElementById(prefix + "CostModal").value) || 0;
+            var margem = parseFloat(document.getElementById(prefix + "MarginModal").value) || 0;
+            if (custo > 0 && margem >= 0) {
+                var venda = custo + (custo * (margem / 100));
+                document.getElementById(prefix + "PriceModal").value = venda.toFixed(2);
+                document.getElementById('resumo-valor').innerText = venda.toFixed(2);
+            }
+        }
+
+        function calcularMargemLucro(prefix) {
+            var custo = parseFloat(document.getElementById(prefix + "CostModal").value) || 0;
+            var venda = parseFloat(document.getElementById(prefix + "PriceModal").value) || 0;
+            if (custo > 0 && venda > 0) {
+                var margem = ((venda - custo) / custo) * 100;
+                document.getElementById(prefix + "MarginModal").value = margem.toFixed(2);
+            }
+        }
+
+        function abrirModalSelecaoLoteA4() {
+            let produtos = window.obterDados ? window.obterDados("produtos") : {};
+            let container = document.getElementById("listaCheckProdutosLote");
+            container.innerHTML = "";
+
+            let chaves = Object.keys(produtos);
+            if (chaves.length === 0) { mostrarAlerta("Nenhum produto cadastrado no sistema.", "Atenção"); return; }
+
+            chaves.forEach(codigo => {
+                let p = produtos[codigo];
+                container.innerHTML += `
+                    <label style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; font-size: 13px;">
+                        <div>
+                            <input type="checkbox" class="check-produto-lote" value="${codigo}" style="margin-right: 8px; transform: scale(1.1);">
+                            <b>${p.nome}</b> <span style="color: #64748b; font-size: 11px;">(Cód: ${codigo})</span>
+                        </div>
+                        <span style="font-weight: bold; color: #059669;">R$ ${(parseFloat(p.valor) || 0).toFixed(2)}</span>
+                    </label>
+                `;
+            });
+            document.getElementById("modalEtiquetasLote").style.display = "flex";
+        }
+
+function executarImpressaoLoteA4() {
+            let checkboxes = document.querySelectorAll(".check-produto-lote:checked");
+            if (checkboxes.length === 0) { mostrarAlerta("Selecione pelo menos um produto para imprimir.", "Atenção"); return; }
+
+            let produtos = window.obterDados ? window.obterDados("produtos") : {};
+            let listaParaImprimir = [];
+            checkboxes.forEach(chk => {
+                let codigo = chk.value;
+                if (produtos[codigo]) {
+                    listaParaImprimir.push({ codigo: codigo, nome: produtos[codigo].nome, valor: produtos[codigo].valor });
+                }
+            });
+
+            document.getElementById("modalEtiquetasLote").style.display = "none";
+
+            let htmlGrid = "";
+            listaParaImprimir.forEach((item, index) => {
+                htmlGrid += `
+                    <div class="etiqueta">
+                        <div class="nome">${item.nome}</div>
+                        <div class="barcode-box"><svg id="bar-${index}"></svg></div>
+                        <div class="preco">R$ ${parseFloat(item.valor).toFixed(2).replace('.', ',')}</div>
+                    </div>
+                `;
+            });
+
+            // Remove o iframe antigo se existir para evitar travamento de cache na segunda tentativa
+            let oldIframe = document.getElementById("iframe-impressao-lote");
+            if (oldIframe) oldIframe.remove();
+
+            // Cria um iframe totalmente novo e limpo a cada execução
+            let iframe = document.createElement("iframe");
+            iframe.id = "iframe-impressao-lote";
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+
+            let doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <html><head>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+                <style>
+                    @page { size: A4; margin: 10mm; }
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+                    .grid-container { display: flex; flex-wrap: wrap; gap: 4mm; justify-content: flex-start; }
+                    .etiqueta { width: 63mm; height: 30mm; border: 1px dashed #ccc; padding: 2mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; page-break-inside: avoid; }
+                    .nome { font-size: 9pt; font-weight: bold; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+                    .barcode-box { width: 100%; display: flex; justify-content: center; }
+                    svg { max-height: 12mm; width: 100%; object-fit: contain; }
+                    .preco { font-size: 12pt; font-weight: bold; }
+                </style>
+                </head><body>
+                    <div class="grid-container">${htmlGrid}</div>
+                <script>
+                    let dadosItens = ${JSON.stringify(listaParaImprimir)};
+                    dadosItens.forEach((item, index) => {
+                        try { JsBarcode("#bar-" + index, item.codigo, { format: "CODE128", width: 1.5, height: 35, displayValue: true, fontSize: 10, margin: 0 }); } catch(e) {}
+                    });
+                    setTimeout(() => { window.print(); }, 800);
+                <\/script></body></html>
+            `);
+            doc.close();
+        }
+
+        window.imprimirEtiquetaPreco = function(idCodigo, idNome, idPreco) {
+            var codigo = document.getElementById(idCodigo).value.trim();
+            var nome = document.getElementById(idNome).value.trim();
+            var preco = parseFloat(document.getElementById(idPreco).value) || 0;
+            if(!codigo) return mostrarAlerta("⚠️ Gere ou digite um código de barras primeiro.", "Atenção");
+
+            var htmlStr = `<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script><style>@page { size: 100mm 30mm; margin: 0; } body { margin: 0; padding: 2mm 3mm; width: 94mm; height: 26mm; display: flex; flex-direction: row; background: #ffffff; color: #000000; font-family: 'Arial', sans-serif; box-sizing: border-box; } .left-col { width: 65%; display: flex; flex-direction: column; justify-content: space-between; } .right-col { width: 35%; display: flex; align-items: center; justify-content: flex-end; } .nome { font-size: 10pt; font-weight: bold; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .barcode-container { margin-top: auto; display: flex; flex-direction: column; } svg { max-height: 12mm; width: 100%; object-fit: contain; margin-left: -5px; } .preco-simbolo { font-size: 14pt; font-weight: bold; margin-right: 2px; } .preco-valor { font-size: 28pt; font-weight: bold; letter-spacing: -1px; }</style></head><body><div class="left-col"><div class="nome">${nome || 'PRODUTO'}</div><div class="barcode-container"><svg id="barcode"></svg></div></div><div class="right-col"><span class="preco-simbolo">R$</span><span class="preco-valor">${preco.toFixed(2).replace('.', ',')}</span></div><script>JsBarcode("#barcode", "${codigo}", { format: "CODE128", width: 2, height: 40, displayValue: true, fontSize: 12, margin: 0, textMargin: 2 }); setTimeout(() => { window.print(); }, 800);<\/script></body></html>`;
+
+            let iframe = document.getElementById("iframe-impressao");
+            let doc = iframe.contentWindow.document;
+            doc.open(); doc.write(htmlStr); doc.close();
+        }
+
+        window.imprimirEtiquetaCodigo = function(idCodigo, idNome) {
+            var codigo = document.getElementById(idCodigo).value.trim();
+            var nome = document.getElementById(idNome).value.trim();
+            if(!codigo) return mostrarAlerta("⚠️ Gere ou digite um código de barras primeiro.", "Atenção");
+
+            var htmlStr = `<html><head><script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script><style>@page { size: 50mm 30mm; margin: 0; } body { text-align: center; font-family: Arial, sans-serif; margin: 0; padding: 2mm; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box; } .nome { font-size: 10pt; font-weight: bold; margin-bottom: 2mm; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; } svg { max-height: 15mm; max-width: 100%; }</style></head><body><div class="nome">${nome || 'PRODUTO'}</div><svg id="barcode"></svg><script>JsBarcode("#barcode", "${codigo}", { format: "CODE128", width: 2, height: 50, displayValue: true, fontSize: 12, margin: 0 }); setTimeout(() => { window.print(); }, 800);<\/script></body></html>`;
+
+            let iframe = document.getElementById("iframe-impressao");
+            let doc = iframe.contentWindow.document;
+            doc.open(); doc.write(htmlStr); doc.close();
+        }
+
+        document.addEventListener('click', function(event) {
+            var menu = document.getElementById('userMenu');
+            if (menu && !menu.contains(event.target)) menu.classList.remove('aberto');
+            var suggestions = document.getElementById('lista-sugestoes-produtos');
+            var nameInput = document.getElementById('newNameModal');
+            if (suggestions && nameInput && !nameInput.contains(event.target) && !suggestions.contains(event.target)) {
+                suggestions.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

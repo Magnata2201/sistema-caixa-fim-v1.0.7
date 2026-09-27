@@ -1,0 +1,267 @@
+/* todos-produtos.css - Estilo Corporativo Profissional */
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
+    margin: 0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #1e293b;
+}
+
+/* Container principal otimizado para aproveitar 100% do espaço útil */
+.container {
+    background-color: #ffffff;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    width: 99%;
+    max-width: 1550px;
+    box-sizing: border-box;
+    border: 1px solid #e2e8f0;
+}
+
+/* Cabeçalho unificado: Botão, Título, Input de Busca e Botões em UMA SÓ LINHA */
+.header-padrao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.header-padrao-esquerda {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-padrao h2 {
+    margin: 0 !important;
+    font-size: 18px !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em;
+}
+
+/* Botão Voltar Profissional Compacto */
+.btn-voltar-universal {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 6px 14px !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background 0.15s ease;
+}
+.btn-voltar-universal:hover {
+    background-color: #334155 !important;
+}
+
+/* Área Direita do Cabeçalho (Busca e Ações do Relatório Lado a Lado) */
+.botoes-direita-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Input de Busca Integrado na Linha Superior */
+.filter-input {
+    width: 260px;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: #f8fafc;
+    color: #334155;
+    transition: all 0.15s ease;
+}
+.filter-input:focus {
+    border-color: #3b82f6;
+    background-color: #fff;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    outline: none;
+}
+
+/* Botões de Relatório Compactos */
+.botoes-direita-container button {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: white;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.15s ease;
+}
+#btnImprimirCompleto { background-color: #0284c7; }
+#btnImprimirCompleto:hover { background-color: #0369a1; }
+#btnSalvarPDF { background-color: #475569; }
+#btnSalvarPDF:hover { background-color: #334155; }
+
+/* Container da Tabela (Foco em dados densos e limpos estilo sistema corporativo) */
+.table-container {
+    width: 100%;
+    max-height: 75vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #ffffff;
+}
+
+#todos-produtos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+/* Cabeçalho Fixo Minimalista */
+#todos-produtos-table thead th {
+    background-color: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+#todos-produtos-table thead th:last-child {
+    border-right: none;
+}
+
+/* Células da Tabela com respiro profissional mínimo */
+#todos-produtos-table tbody td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155;
+}
+#todos-produtos-table tbody td:last-child {
+    border-right: none;
+}
+
+#todos-produtos-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Larguras precisas para manter 100% de encaixe na tela */
+#todos-produtos-table th:nth-child(1), #todos-produtos-table td:nth-child(1) { width: 16%; } 
+#todos-produtos-table th:nth-child(2), #todos-produtos-table td:nth-child(2) { width: 34%; } 
+#todos-produtos-table th:nth-child(3), #todos-produtos-table td:nth-child(3) { width: 10%; text-align: left; } 
+#todos-produtos-table th:nth-child(4), #todos-produtos-table td:nth-child(4) { width: 12%; text-align: left; } 
+#todos-produtos-table th:nth-child(5), #todos-produtos-table td:nth-child(5) { width: 12%; text-align: left; } 
+#todos-produtos-table th:nth-child(6), #todos-produtos-table td:nth-child(6) { width: 16%; text-align: center; } 
+
+/* Elementos de Destaque Visual Modernos */
+.badge-barcode {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+.estoque-badge {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+/* Botões de Ação na Linha Lado a Lado */
+.action-buttons {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.btn-acao {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 11px;
+    transition: background 0.15s ease;
+}
+
+.btn-etiqueta {
+    background-color: #f3e8ff;
+    color: #7e22ce;
+}
+.btn-etiqueta:hover {
+    background-color: #e9d5ff;
+}
+
+.btn-editar-qtd {
+    background-color: #ffedd5;
+    color: #c2410c;
+}
+.btn-editar-qtd:hover {
+    background-color: #fed7aa;
+}
+
+/* Rodapé Fixo Profissional */
+#todos-produtos-table tfoot {
+    background-color: #f8fafc;
+    border-top: 1px solid #cbd5e1;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+#todos-produtos-table tfoot td {
+    padding: 10px;
+    text-align: right;
+    font-weight: 600;
+    color: #475569;
+    border: none;
+}
+#todos-produtos-table tfoot .total-value {
+    color: #0284c7;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* Responsividade Adaptada para Telas Menores */
+@media (max-width: 900px) {
+    .header-padrao {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .header-padrao-esquerda {
+        justify-content: space-between;
+    }
+    .botoes-direita-container {
+        flex-direction: column;
+        width: 100%;
+    }
+    .filter-input {
+        width: 100%;
+    }
+    .botoes-direita-container button {
+        width: 100%;
+    }
+}
