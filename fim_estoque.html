@@ -34,13 +34,13 @@
       #todos-produtos-table tfoot td { border: 1px solid #cbd5e1 !important; }
 
       /* LARGURAS PROPORCIONAIS PARA 7 COLUNAS */
-      #todos-produtos-table th:nth-child(1), #todos-produtos-table td:nth-child(1) { width: 14%; }
-      #todos-produtos-table th:nth-child(2), #todos-produtos-table td:nth-child(2) { width: 26%; }
+      #todos-produtos-table th:nth-child(1), #todos-produtos-table td:nth-child(1) { width: 13%; }
+      #todos-produtos-table th:nth-child(2), #todos-produtos-table td:nth-child(2) { width: 23%; }
       #todos-produtos-table th:nth-child(3), #todos-produtos-table td:nth-child(3) { width: 8%; text-align: center; }
-      #todos-produtos-table th:nth-child(4), #todos-produtos-table td:nth-child(4) { width: 11%; text-align: left; }
-      #todos-produtos-table th:nth-child(5), #todos-produtos-table td:nth-child(5) { width: 11%; text-align: left; }
-      #todos-produtos-table th:nth-child(6), #todos-produtos-table td:nth-child(6) { width: 13%; text-align: left; }
-      #todos-produtos-table th:nth-child(7), #todos-produtos-table td:nth-child(7) { width: 17%; text-align: center; }
+      #todos-produtos-table th:nth-child(4), #todos-produtos-table td:nth-child(4) { width: 10%; text-align: left; }
+      #todos-produtos-table th:nth-child(5), #todos-produtos-table td:nth-child(5) { width: 10%; text-align: left; }
+      #todos-produtos-table th:nth-child(6), #todos-produtos-table td:nth-child(6) { width: 12%; text-align: left; }
+      #todos-produtos-table th:nth-child(7), #todos-produtos-table td:nth-child(7) { width: 24%; text-align: center; }
 
       /* MODAL GLOBAL */
       .modal { 
@@ -67,6 +67,8 @@
       }
 
       .estoque-badge { background: #fef2f2 !important; border: 1px solid #fecaca !important; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #dc2626 !important; }
+      .btn-excluir-item { background: #e74c3c !important; color: white !important; border: none !important; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
+      .btn-excluir-item:hover { background: #c0392b !important; }
   </style>
 </head>
 <body>
@@ -133,6 +135,22 @@
       </div>
   </div>
 
+  <!-- MODAL DE EXCLUSÃO DE PRODUTO -->
+  <div id="modalExcluirProduto" class="modal" style="display: none;">
+      <div class="modal-content-custom">
+          <h3 style="margin-top: 0; color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 8px; font-size:18px;">🗑️ Excluir Produto</h3>
+          <p style="font-size: 13px; color: #555; margin-bottom: 6px;">Tem certeza que deseja apagar definitivamente o produto?</p>
+          <p id="delProdutoNome" style="font-weight: bold; color: #c0392b; margin: 8px 0 15px 0; font-size: 14px; text-align: center;"></p>
+          <input type="hidden" id="delProdutoCodigo">
+          <label style="display:block; font-weight:bold; font-size:12px; color:#555; margin-bottom:4px;">Senha Master de Confirmação:</label>
+          <input type="password" id="delProdutoSenha" placeholder="Digite a Senha Master do Sistema" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 18px; font-size: 14px; box-sizing: border-box;">
+          <div style="display: flex; gap: 10px;">
+              <button onclick="fecharModalExcluir()" style="flex: 1; padding: 11px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor:pointer; font-weight:bold; font-size:14px;">Cancelar</button>
+              <button onclick="confirmarExclusaoProduto()" style="flex: 1; padding: 11px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor:pointer; font-weight:bold; font-size:14px;">Excluir</button>
+          </div>
+      </div>
+  </div>
+
   <script src="script.js"></script>
   <script>
     function mostrarAlerta(msg, titulo = "Aviso") {
@@ -175,6 +193,41 @@
             mostrarAlerta("Quantidade do estoque atualizada com sucesso!", "Sucesso");
         } else {
             mostrarAlerta("Produto não encontrado no banco de dados.", "Erro");
+        }
+    }
+
+    window.abrirModalExcluir = function(codigo, nome) {
+        document.getElementById("delProdutoCodigo").value = codigo;
+        document.getElementById("delProdutoNome").innerText = `${nome} (${codigo})`;
+        document.getElementById("delProdutoSenha").value = "";
+        document.getElementById("modalExcluirProduto").style.display = "flex";
+        setTimeout(() => document.getElementById("delProdutoSenha").focus(), 100);
+    }
+
+    window.fecharModalExcluir = function() {
+        document.getElementById("modalExcluirProduto").style.display = "none";
+    }
+
+    window.confirmarExclusaoProduto = function() {
+        var codigo = document.getElementById("delProdutoCodigo").value;
+        var senhaDigitada = document.getElementById("delProdutoSenha").value;
+
+        var senhasSys = window.obterDados ? window.obterDados("senhasSistema") : null;
+        var senhaCorreta = senhasSys ? senhasSys.master : "1996";
+
+        if (senhaDigitada !== senhaCorreta) {
+            return mostrarAlerta("Senha Master Incorreta! Operação cancelada.", "Erro de Segurança");
+        }
+
+        var produtos = window.obterDados ? window.obterDados("produtos") : {};
+        if (produtos && produtos[codigo]) {
+            delete produtos[codigo];
+            if (window.salvarDados) window.salvarDados("produtos", produtos);
+            fecharModalExcluir();
+            atualizarTabelaBaixoEstoque();
+            mostrarAlerta("Produto excluído com sucesso!", "Sucesso");
+        } else {
+            mostrarAlerta("Produto não encontrado no sistema.", "Erro");
         }
     }
 
@@ -235,6 +288,7 @@
                             <div class="action-buttons">
                                 <button class="btn-acao btn-etiqueta" onclick="imprimirEtiqueta('${codigo}', '${nomeSeguro}', ${venda})">🖨️ Etiqueta</button>
                                 <button class="btn-acao btn-editar-qtd" onclick="abrirModalQtd('${codigo}', '${nomeSeguro}', ${qtd})">✏️ Estoque</button>
+                                <button class="btn-acao btn-excluir-item" onclick="abrirModalExcluir('${codigo}', '${nomeSeguro}')">🗑️ Excluir</button>
                             </div>
                         </td>`;
         tbody.appendChild(tr);
@@ -242,7 +296,6 @@
       totalElement.innerText = "R$ " + totalVendaEstoqueBaixo.toFixed(2);
     }
 
-    // IFRAME INVISÍVEL PARA IMPRESSÃO DE ETIQUETA NO .EXE (SEGURANÇA CONTRA TELA BRANCA)
     if (!document.getElementById("iframe-impressao-global")) {
         let iframe = document.createElement("iframe");
         iframe.id = "iframe-impressao-global";
@@ -287,7 +340,6 @@
     if (inputFiltro) inputFiltro.addEventListener("input", atualizarTabelaBaixoEstoque);
     if (window.isBancoPronto) atualizarTabelaBaixoEstoque();
 
-    // SALVAR EM PDF LIMPO
     var btnPdf = document.getElementById("btnSalvarPDF");
     if (btnPdf) {
       btnPdf.addEventListener("click", function() {
@@ -341,7 +393,6 @@
       });
     }
 
-    // IMPRIMIR RELATÓRIO LIMPO
     var btnImprimir = document.getElementById("btnImprimirCompleto");
     if (btnImprimir) {
       btnImprimir.addEventListener("click", function() {
