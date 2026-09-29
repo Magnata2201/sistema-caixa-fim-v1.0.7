@@ -6,6 +6,14 @@ window.salvarDados = window.salvarDados || function(chave, dados) {
     localStorage.setItem(chave, JSON.stringify(dados));
 };
 
+// ==========================================
+// CONTROLO DE CAIXA INDIVIDUAL
+// ==========================================
+window.obterChaveCaixa = function(chaveBase) {
+    const usuario = sessionStorage.getItem("usuarioLogado") || "Admin";
+    return "caixa_" + chaveBase + "_" + usuario;
+};
+
 function validarCPF(cpf) {
     cpf = cpf.replace(/\D/g, '');
     if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
@@ -97,11 +105,9 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function atualizarTopBar() {
-    var isAberto = localStorage.getItem("caixa_aberto_status") === "ABERTO";
-    if (!isAberto && window.obterDados("statusCaixaAberto") === true) {
-        isAberto = true;
-        localStorage.setItem("caixa_aberto_status", "ABERTO");
-    }
+    var chaveAberto = window.obterChaveCaixa("aberto_status");
+    var isAberto = localStorage.getItem(chaveAberto) === "ABERTO";
+    
     var elStatus = document.getElementById('display-status-caixa');
     var elBloqueio = document.getElementById('bloqueio-tela');
     if (elStatus && elBloqueio) {
@@ -915,17 +921,26 @@ window.confirmarFechamentoCaixa = function() {
   var senha = document.getElementById('input-senha-fechar').value;
   var senhasSys = window.obterDados("senhasSistema") || { fecharCaixa: "2201" };
   if (senha !== senhasSys.fecharCaixa) return window.mostrarAvisoModal("Senha incorreta!");
+  
   var dataAtualObj = new Date();
   var offset = dataAtualObj.getTimezoneOffset() * 60000;
   var dataFormatada = (new Date(dataAtualObj.getTime() - offset)).toISOString().split('T')[0];
   var horaFechamento = dataAtualObj.toLocaleTimeString();
   var operador = sessionStorage.getItem("usuarioLogado") || "Operador"; 
-  var suprimentoLocal = localStorage.getItem("caixa_valor_abertura");
-  var suprimento = suprimentoLocal !== null ? parseFloat(suprimentoLocal) : parseFloat(window.obterDados("valorAberturaCaixa")) || 0;
+  
+  var suprimentoLocal = localStorage.getItem(window.obterChaveCaixa("valor_abertura"));
+  var suprimento = suprimentoLocal !== null ? parseFloat(suprimentoLocal) : 0;
+  
   var sangriasTotal = 0;
   var movimentacoes = window.obterDados("movimentacoes") || {};
   var movHoje = movimentacoes[dataFormatada] || [];
-  movHoje.forEach(function(mov) { if (mov.tipoMovimento === 'sangria' || mov.tipoMovimento === 'gasto' || mov.tipoMovimento === 'despesa') sangriasTotal += (parseFloat(mov.valor) || 0); });
+  
+  movHoje.forEach(function(mov) { 
+      if ((mov.tipoMovimento === 'sangria' || mov.tipoMovimento === 'gasto' || mov.tipoMovimento === 'despesa') && mov.usuario === operador) {
+          sangriasTotal += (parseFloat(mov.valor) || 0); 
+      }
+  });
+  
   var formasVenda = window.obterDados("resumoFormas") || { Pix: 0, Crédito: 0, Débito: 0, Dinheiro: 0, Cheque: 0, VR: 0, Fiado: 0, Misto: 0 };
   
   var totalBrutoVendas = 0;
@@ -955,15 +970,13 @@ window.confirmarFechamentoCaixa = function() {
   doc.open(); doc.write(htmlFechamento); doc.close();
 
   window.salvarDados("resumoFormas", { Pix: 0, Crédito: 0, Débito: 0, Dinheiro: 0, Cheque: 0, VR: 0, Fiado: 0, Misto: 0 }); 
-  localStorage.removeItem("caixa_aberto_status");
-  localStorage.removeItem("caixa_valor_abertura");
-  window.salvarDados("caixaAbertoData", null);
-  window.salvarDados("statusCaixaAberto", false); 
-  window.salvarDados("valorAberturaCaixa", 0); 
+  
+  localStorage.removeItem(window.obterChaveCaixa("aberto_status"));
+  localStorage.removeItem(window.obterChaveCaixa("valor_abertura"));
   window.salvarDados("numeroPedidoAtual", 0);
 
   window.fecharModalSenhaFechamento();
-  window.mostrarAvisoModal("Imprimindo Resumo e Finalizando Sessão...");
+  window.mostrarAvisoModal("A imprimir Resumo e a finalizar Sessão...");
   setTimeout(function() { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(function() { window.location.replace("index.html"); }, 1500); }, 500);
 };
 
@@ -971,13 +984,13 @@ window.abrirModalAbertura = function() { document.getElementById('modal-abertura
 window.confirmarAbertura = function() {
   var valor = parseFloat(document.getElementById('valor-abertura').value);
   if (isNaN(valor) || valor < 0) return window.mostrarAvisoModal("Valor inválido");
-  localStorage.setItem("caixa_aberto_status", "ABERTO");
-  localStorage.setItem("caixa_valor_abertura", valor.toFixed(2));
-  window.salvarDados("valorAberturaCaixa", valor.toFixed(2));
-  window.salvarDados("caixaAbertoData", new Date().toLocaleDateString());
-  window.salvarDados("statusCaixaAberto", true); 
+  
+  localStorage.setItem(window.obterChaveCaixa("aberto_status"), "ABERTO");
+  localStorage.setItem(window.obterChaveCaixa("valor_abertura"), valor.toFixed(2));
+  
   let numAtual = parseInt(window.obterDados("numeroPedidoAtual"));
   if (isNaN(numAtual) || numAtual <= 0) window.salvarDados("numeroPedidoAtual", 1);
+  
   fecharModal('modal-abertura');
   atualizarTopBar();
   inicializarCaixaCompleto();
