@@ -239,6 +239,30 @@ function temPermissao(acao) {
 }
 
 // ==========================================
+// CONTROLO DE CAIXA INDIVIDUAL
+// ==========================================
+function obterChaveCaixa(chaveBase) {
+    const usuario = sessionStorage.getItem("usuarioLogado") || "admin";
+    return "caixa_" + chaveBase + "_" + usuario;
+}
+
+function abrirCaixaIndividual(valorAbertura) {
+    localStorage.setItem(obterChaveCaixa("aberto_status"), "true");
+    localStorage.setItem(obterChaveCaixa("valor_abertura"), valorAbertura);
+    localStorage.setItem(obterChaveCaixa("data_abertura"), new Date().toISOString());
+}
+
+function fecharCaixaIndividual() {
+    localStorage.removeItem(obterChaveCaixa("aberto_status"));
+    localStorage.removeItem(obterChaveCaixa("valor_abertura"));
+    localStorage.removeItem(obterChaveCaixa("data_abertura"));
+}
+
+function verificarCaixaAberto() {
+    return localStorage.getItem(obterChaveCaixa("aberto_status")) === "true";
+}
+
+// ==========================================
 // IMPORTAÇÃO / EXPORTAÇÃO DE BACKUP
 // ==========================================
 function exportarBackup() {
@@ -360,8 +384,16 @@ function executarApagarDados() {
         salvarDados("statusCaixaAberto", false);
         salvarDados("ultimaVenda", null);
         
-        localStorage.removeItem("caixa_aberto_status");
-        localStorage.removeItem("caixa_valor_abertura");
+        let chavesParaRemover = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            let chave = localStorage.key(i);
+            if (chave.startsWith("caixa_aberto_status") || 
+                chave.startsWith("caixa_valor_abertura") || 
+                chave.startsWith("caixa_data_abertura")) {
+                chavesParaRemover.push(chave);
+            }
+        }
+        chavesParaRemover.forEach(k => localStorage.removeItem(k));
 
         setTimeout(function() {
             if (msgBox) msgBox.style.display = "none";
@@ -504,9 +536,28 @@ function salvarImagemQRPix() {
 
 function removerImagemQRPix() {
     localStorage.removeItem("qrCodePix");
-    document.getElementById("input-qr-pix").value = "";
-    document.getElementById("status-qr-pix").style.display = "none";
-    showMessage("QR Code removido.");
+    
+    const fileInput = document.getElementById("input-qr-pix");
+    if(fileInput) fileInput.value = "";
+    
+    const statusPix = document.getElementById("status-qr-pix");
+    if(statusPix) statusPix.style.display = "none";
+    
+    const chkPix = document.getElementById('emp-usar-qr-pix');
+    if(chkPix) chkPix.checked = false;
+    
+    const configQrDiv = document.getElementById('config-qr-pix');
+    if(configQrDiv) configQrDiv.style.display = 'none';
+
+    let config = obterDados("configEmpresa") || {};
+    config.usarQrPix = false;
+    salvarDados("configEmpresa", config);
+
+    if (typeof showMessage === "function") {
+        showMessage("QR Code removido.");
+    } else if (typeof mostrarAlertaGlobal === "function") {
+        mostrarAlertaGlobal("QR Code removido.", "Sucesso");
+    }
 }
 
 function aplicarConfiguracoesEmpresaGeral() {
@@ -775,7 +826,6 @@ function aplicarPermissoesPainel() {
     if (document.getElementById('btn-backup-import')) document.getElementById('btn-backup-import').style.display = configEmp.usarBackup ? 'inline-block' : 'none';
 
     if (role === 'admin') {
-        // Regra do Admin: Vê a cozinha apenas dependendo da configuração da empresa
         if (document.getElementById('card-cozinha')) {
             document.getElementById('card-cozinha').style.display = (configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
         }
@@ -814,7 +864,6 @@ function aplicarPermissoesPainel() {
     const user = usuarios.find(u => u.usuario === usuarioLogado); 
     const p = (user && user.permissoes) ? user.permissoes : {};
 
-    // Regra do Operador: Exige que a permissão (p.cozinha) também seja verdadeira
     if(document.getElementById('card-cozinha')) document.getElementById('card-cozinha').style.display = (p.cozinha && configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
 
     if(document.getElementById('card-caixa')) document.getElementById('card-caixa').style.display = (p.caixa && isAtivoSaaS('mod_caixa')) ? 'block' : 'none';
