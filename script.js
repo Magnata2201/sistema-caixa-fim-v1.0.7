@@ -774,12 +774,12 @@ function aplicarPermissoesPainel() {
     if (document.getElementById('btn-backup-export')) document.getElementById('btn-backup-export').style.display = configEmp.usarBackup ? 'inline-block' : 'none';
     if (document.getElementById('btn-backup-import')) document.getElementById('btn-backup-import').style.display = configEmp.usarBackup ? 'inline-block' : 'none';
 
-    // Garante que o Monitor da Cozinha aparece no painel se ativado nas configurações da empresa
-    if (document.getElementById('card-cozinha')) {
-        document.getElementById('card-cozinha').style.display = (configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
-    }
-
     if (role === 'admin') {
+        // Regra do Admin: Vê a cozinha apenas dependendo da configuração da empresa
+        if (document.getElementById('card-cozinha')) {
+            document.getElementById('card-cozinha').style.display = (configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
+        }
+
         if (!localStorage.getItem("firebaseConfigJSON") && document.getElementById("alerta-firebase")) {
             document.getElementById("alerta-firebase").style.display = "block";
         }
@@ -813,6 +813,9 @@ function aplicarPermissoesPainel() {
     let usuarios = obterDados('usuarios') || [];
     const user = usuarios.find(u => u.usuario === usuarioLogado); 
     const p = (user && user.permissoes) ? user.permissoes : {};
+
+    // Regra do Operador: Exige que a permissão (p.cozinha) também seja verdadeira
+    if(document.getElementById('card-cozinha')) document.getElementById('card-cozinha').style.display = (p.cozinha && configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
 
     if(document.getElementById('card-caixa')) document.getElementById('card-caixa').style.display = (p.caixa && isAtivoSaaS('mod_caixa')) ? 'block' : 'none';
     if(document.getElementById('card-cupons')) document.getElementById('card-cupons').style.display = (p.cupons && isAtivoSaaS('mod_cupons')) ? 'block' : 'none';
