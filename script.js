@@ -814,7 +814,7 @@ function salvarPermissoesUsuario() {
             }
         });
 
-usuarios[index].permissoes = novasPermissoes;
+        usuarios[index].permissoes = novasPermissoes;
         salvarDados('usuarios', usuarios);
         
         // ⚡ GATILHO PARA ATUALIZAR A TELA EM TEMPO REAL
@@ -822,6 +822,8 @@ usuarios[index].permissoes = novasPermissoes;
 
         showMessage(`Permissões salvas com sucesso!`);
         fecharModal('modalPermissoes');
+    }
+}
 
 function aplicarPermissoesPainel() {
     const role = sessionStorage.getItem('userRole');
