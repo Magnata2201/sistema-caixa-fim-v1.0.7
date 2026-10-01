@@ -7,11 +7,18 @@ window.salvarDados = window.salvarDados || function(chave, dados) {
 };
 
 // ==========================================
-// CONTROLO DE CAIXA INDIVIDUAL
+// CONTROLO DE CAIXA INDIVIDUAL E SEGURANÇA
 // ==========================================
 window.obterChaveCaixa = function(chaveBase) {
     const usuario = sessionStorage.getItem("usuarioLogado") || "Admin";
     return "caixa_" + chaveBase + "_" + usuario;
+};
+
+window.isCaixaAberto = function() {
+    var chave = window.obterChaveCaixa("aberto_status");
+    var dbVal = window.obterDados(chave);
+    var localVal = localStorage.getItem(chave);
+    return dbVal === "ABERTO" || localVal === "ABERTO";
 };
 
 function validarCPF(cpf) {
@@ -49,7 +56,7 @@ window.fecharModalAvisoGlobal = function() {
     var m = document.getElementById("modalAvisoSistema");
     if (m) m.style.display = 'none';
     var cb = document.getElementById("codigo-barra");
-    if (cb) cb.focus();
+    if (cb && window.isCaixaAberto()) cb.focus();
 };
 
 window.mostrarAvisoModal = function(mensagem, titulo = "Atenção") {
@@ -66,9 +73,7 @@ window.mostrarAvisoModal = function(mensagem, titulo = "Atenção") {
         setTimeout(() => { modalEl.dataset.bloqueado = "false"; }, 300);
         
         let btnOk = modalEl.querySelector('button');
-        if(btnOk) {
-            setTimeout(() => { btnOk.focus(); }, 100);
-        }
+        if(btnOk) setTimeout(() => { btnOk.focus(); }, 100);
     } else {
         alert(titulo + "\n\n" + mensagem); 
     }
@@ -105,18 +110,32 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function atualizarTopBar() {
-    var chaveAberto = window.obterChaveCaixa("aberto_status");
-    var isAberto = localStorage.getItem(chaveAberto) === "ABERTO";
+    var isAberto = window.isCaixaAberto();
     
     var elStatus = document.getElementById('display-status-caixa');
     var elBloqueio = document.getElementById('bloqueio-tela');
-    if (elStatus && elBloqueio) {
-        if (isAberto) {
-            elStatus.innerText = "Aberto";
-            elBloqueio.style.display = 'none';
-        } else {
-            elStatus.innerText = "Fechado";
+    
+    if (elStatus) {
+        elStatus.innerText = isAberto ? "Aberto" : "Fechado";
+        elStatus.style.color = isAberto ? "#27ae60" : "#c0392b";
+    }
+    
+    if (elBloqueio) {
+        if (!isAberto) {
             elBloqueio.style.display = 'flex';
+            elBloqueio.style.position = 'fixed';
+            elBloqueio.style.top = '0';
+            elBloqueio.style.left = '0';
+            elBloqueio.style.width = '100vw';
+            elBloqueio.style.height = '100vh';
+            elBloqueio.style.backgroundColor = 'rgba(0,0,0,0.95)';
+            elBloqueio.style.zIndex = '9998'; 
+            elBloqueio.style.flexDirection = 'column';
+            elBloqueio.style.alignItems = 'center';
+            elBloqueio.style.justifyContent = 'center';
+            elBloqueio.style.color = 'white';
+        } else {
+            elBloqueio.style.display = 'none';
         }
     }
 }
@@ -142,7 +161,19 @@ function inicializarCaixaCompleto() {
     if (linhaFiadoMisto) linhaFiadoMisto.style.display = fiadoHabilitado ? "block" : "none";
 }
 
-if (window.isBancoPronto) { inicializarCaixaCompleto(); } else { document.addEventListener('bancoPronto', inicializarCaixaCompleto); }
+if (window.isBancoPronto) { 
+    inicializarCaixaCompleto(); 
+    atualizarTopBar();
+} else { 
+    document.addEventListener('bancoPronto', function() {
+        inicializarCaixaCompleto();
+        atualizarTopBar();
+    }); 
+}
+
+document.addEventListener('dadosAtualizados', function() {
+    atualizarTopBar();
+});
 
 function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -174,6 +205,8 @@ function adicionarAoCarrinhoComRegraFidelidade(codigo, nome, valorOriginal, quan
 }
 
 window.adicionarItemVenda = function() {
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("O Caixa está fechado!");
+
     var inputEl = document.getElementById("codigo-barra");
     var inputVal = inputEl.value.trim();
     var qtdInput = parseInt(document.getElementById("quantidade-produto").value.trim());
@@ -252,7 +285,7 @@ window.adicionarItemVenda = function() {
 };
 
 /* ==============================================================
-   FIDELIDADE (CADASTRO EXCLUSIVO NO CAIXA)
+   FIDELIDADE
    ============================================================== */
 function processarItemPendenteFidelidade() {
     fidelidadePerguntada = true;
@@ -329,10 +362,11 @@ function removerClienteFidelidade() {
     }
 }
 
-/* ==========================================
-// FLUXO DO CLIENTE FIADO NO CAIXA
-========================================== */
+/* ==============================================================
+   FLUXO DO CLIENTE FIADO NO CAIXA
+============================================================== */
 window.iniciarPagamentoFiado = function() {
+    if (!window.isCaixaAberto()) return;
     if (vendaAtual.length === 0) return window.mostrarAvisoModal("Carrinho vazio!");
     if (clienteFiadoAtual) {
         finalizarVenda("Fiado", null, null);
@@ -410,6 +444,7 @@ function atualizarTabela() {
 }
 
 window.abrirOpcoesPagamento = function() {
+  if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
   if (vendaAtual.length === 0) return window.mostrarAvisoModal("Nenhum item adicionado.");
   document.getElementById("modal-pagamento").style.display = "flex";
 };
@@ -419,6 +454,7 @@ window.fecharModalPagamento = function() { fecharModal("modal-pagamento"); docum
 // LÓGICA DO QR CODE DO PIX NO CAIXA
 // ==============================================================
 window.iniciarPagamentoPix = function() {
+    if (!window.isCaixaAberto()) return;
     let configEmp = window.obterDados("configEmpresa") || {};
     let qrCodeSalvo = localStorage.getItem("qrCodePix");
 
@@ -443,29 +479,66 @@ window.confirmarPagamentoPix = function() {
     finalizarVenda("Pix", null, null);
 };
 
-window.abrirModalSangria = function() { document.getElementById("modal-sangria").style.display = "flex"; document.getElementById("valor-sangria").focus(); };
+// ==============================================================
+// SANGRIA COM SENHA MASTER
+// ==============================================================
+window.abrirModalSangria = function() { 
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
+    document.getElementById("modal-sangria").style.display = "flex"; 
+    document.getElementById("senha-sangria").value = "";
+    document.getElementById("valor-sangria").value = "";
+    document.getElementById("motivo-sangria").value = "";
+    setTimeout(() => document.getElementById("senha-sangria").focus(), 100); 
+};
 window.fecharModalSangria = function() { fecharModal("modal-sangria"); };
 window.confirmarSangria = function() {
+    var senhaDigitada = document.getElementById("senha-sangria").value;
     var valor = parseFloat(document.getElementById("valor-sangria").value);
     var motivo = document.getElementById("motivo-sangria").value.trim();
-    if (isNaN(valor) || valor <= 0 || !motivo) return window.mostrarAvisoModal("Preencha os dados corretamente.");
+    
+    var senhasSys = window.obterDados("senhasSistema") || null;
+    var senhaCorreta = senhasSys && senhasSys.master ? senhasSys.master : "1996"; 
+
+    if (senhaDigitada !== senhaCorreta) {
+        return window.mostrarAvisoModal("⚠️ Palavra-passe Master Incorreta!", "Acesso Negado");
+    }
+
+    if (isNaN(valor) || valor <= 0 || !motivo) {
+        return window.mostrarAvisoModal("Preencha um valor válido e o motivo da sangria.");
+    }
+
     var data = new Date();
     var offset = data.getTimezoneOffset() * 60000;
     var dataAtual = (new Date(data.getTime() - offset)).toISOString().split('T')[0];
     var usuario = sessionStorage.getItem("usuarioLogado") || "desconhecido";
+    
     var movimentacoes = window.obterDados("movimentacoes") || {};
     if (!movimentacoes[dataAtual]) movimentacoes[dataAtual] = [];
-    movimentacoes[dataAtual].push({ tipoMovimento: 'sangria', produto: 'SANGRIA: ' + motivo, valor: valor, quantidade: 1, hora: data.toLocaleTimeString(), formaPagamento: 'Dinheiro', usuario: usuario, data: dataAtual });
+    
+    movimentacoes[dataAtual].push({ 
+        tipoMovimento: 'sangria', 
+        produto: 'SANGRIA: ' + motivo, 
+        valor: valor, 
+        quantidade: 1, 
+        hora: data.toLocaleTimeString(), 
+        formaPagamento: 'Dinheiro', 
+        usuario: usuario, 
+        data: dataAtual 
+    });
+    
     window.salvarDados("movimentacoes", movimentacoes);
     window.mostrarAvisoModal("Sangria registrada com sucesso!", "Sangria");
     window.fecharModalSangria();
 };
 
 window.abrirModalDesconto = function() {
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
     if(vendaAtual.length === 0) return window.mostrarAvisoModal("Caixa vazio!");
     document.getElementById("modal-desconto").style.display = "flex";
     document.getElementById("senha-desconto").value = "";
     document.getElementById("valor-desconto").value = "";
+    document.getElementById("desconto-valor-total-venda").innerText = totalVenda.toFixed(2);
+    setTimeout(() => document.getElementById("senha-desconto").focus(), 100); 
 };
 window.fecharModalDesconto = function() { fecharModal("modal-desconto"); };
 window.confirmarDesconto = function() {
@@ -475,6 +548,7 @@ window.confirmarDesconto = function() {
     var desc = parseFloat(descInput.value);
     var senhasSys = window.obterDados("senhasSistema") || null;
     var senhaCorreta = senhasSys && senhasSys.master ? senhasSys.master : "1996"; 
+    
     if (senha === senhaCorreta && !isNaN(desc) && desc > 0) {
         if(desc > totalVenda) return window.mostrarAvisoModal("O desconto não pode ser superior ao total da venda!");
         totalVenda = Math.max(0, totalVenda - desc);
@@ -486,6 +560,121 @@ window.confirmarDesconto = function() {
         window.mostrarAvisoModal("Dados incorretos ou Palavra-passe Inválida!", "Erro de Segurança"); 
         senhaInput.value = ""; 
     }
+};
+
+// ==============================================================
+// CONSULTA DE PREÇO (F7)
+// ==============================================================
+window.abrirModalConsultaPreco = function() {
+    document.getElementById("modal-consulta-preco").style.display = "flex";
+    var input = document.getElementById("input-consulta-preco");
+    if(input) { input.value = ""; setTimeout(() => input.focus(), 100); }
+    var res = document.getElementById("resultado-consulta-preco");
+    if(res) res.innerHTML = "Aguardando produto...";
+};
+
+window.fecharModalConsultaPreco = function() {
+    fecharModal("modal-consulta-preco");
+    var cb = document.getElementById("codigo-barra");
+    if (cb && window.isCaixaAberto()) cb.focus();
+};
+
+window.buscarPrecoModal = function() {
+    var inputVal = document.getElementById("input-consulta-preco").value.trim();
+    var res = document.getElementById("resultado-consulta-preco");
+    if(!inputVal) {
+        res.innerHTML = "<span style='color:#e74c3c;'>Digite um código ou nome!</span>";
+        return;
+    }
+    
+    var produtosNaNuvem = window.obterDados("produtos") || {};
+    var configEmp = window.obterDados("configEmpresa") || {};
+    var codigoEncontrado = null;
+
+    if (produtosNaNuvem[inputVal]) {
+        codigoEncontrado = inputVal;
+    } else if (configEmp.usarBuscaNome === true) {
+        var lowerInput = inputVal.toLowerCase();
+        for (var key in produtosNaNuvem) {
+            if (produtosNaNuvem[key].nome && produtosNaNuvem[key].nome.toLowerCase() === lowerInput) {
+                codigoEncontrado = key;
+                break;
+            }
+        }
+    }
+
+    if (!codigoEncontrado) {
+        res.innerHTML = "<span style='color:#e74c3c;'>Produto não encontrado!</span>";
+        document.getElementById("input-consulta-preco").value = "";
+        document.getElementById("input-consulta-preco").focus();
+        return;
+    }
+
+    var p = produtosNaNuvem[codigoEncontrado];
+    res.innerHTML = `<div style="color:#2c3e50; font-size: 16px;">${p.nome}</div>
+                     <div style="color:#27ae60; font-size: 26px; margin-top: 5px;">R$ ${parseFloat(p.valor).toFixed(2)}</div>
+                     <div style="color:#7f8c8d; font-size: 12px; margin-top: 5px;">Estoque: ${p.quantidade || 0} un | Cód: ${codigoEncontrado}</div>`;
+    
+    document.getElementById("input-consulta-preco").value = "";
+    document.getElementById("input-consulta-preco").focus();
+};
+
+// ==============================================================
+// CONFERÊNCIA DE CAIXA (F6) - EXCLUSIVO SANGRIA E CHEQUE/VR SEPARADOS
+// ==============================================================
+window.abrirModalConferencia = function() {
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("O Caixa está fechado!");
+
+    var dataAtualObj = new Date();
+    var offset = dataAtualObj.getTimezoneOffset() * 60000;
+    var dataFormatada = (new Date(dataAtualObj.getTime() - offset)).toISOString().split('T')[0];
+    var operador = sessionStorage.getItem("usuarioLogado") || "Operador"; 
+
+    var chaveValorAbertura = window.obterChaveCaixa("valor_abertura");
+    var suprimentoDb = window.obterDados(chaveValorAbertura);
+    var suprimentoLocal = localStorage.getItem(chaveValorAbertura);
+    var suprimento = parseFloat(suprimentoDb || suprimentoLocal) || 0;
+
+    var sangriasTotal = 0;
+    var movimentacoes = window.obterDados("movimentacoes") || {};
+    var movHoje = movimentacoes[dataFormatada] || [];
+
+    movHoje.forEach(function(mov) { 
+        // CONTABILIZA APENAS SANGRIAS REAIS NA CONFERÊNCIA DO CAIXA
+        if (mov.tipoMovimento === 'sangria' && mov.usuario === operador) {
+            sangriasTotal += (parseFloat(mov.valor) || 0); 
+        }
+    });
+
+    var formasVenda = window.obterDados("resumoFormas") || { Pix: 0, Crédito: 0, Débito: 0, Dinheiro: 0, Cheque: 0, VR: 0, Fiado: 0, Misto: 0 };
+
+    var totalBrutoVendas = 0;
+    Object.keys(formasVenda).forEach(function(k) { if(k !== 'Fiado') totalBrutoVendas += formasVenda[k]; });
+    
+    var dinheiroEsperadoGaveta = suprimento + (formasVenda.Dinheiro || 0) - sangriasTotal;
+
+    document.getElementById("conf-abertura").innerText = "R$ " + suprimento.toFixed(2);
+    document.getElementById("conf-dinheiro").innerText = "R$ " + (formasVenda.Dinheiro || 0).toFixed(2);
+    document.getElementById("conf-pix").innerText = "R$ " + (formasVenda.Pix || 0).toFixed(2);
+    document.getElementById("conf-credito").innerText = "R$ " + (formasVenda.Crédito || 0).toFixed(2);
+    document.getElementById("conf-debito").innerText = "R$ " + (formasVenda.Débito || 0).toFixed(2);
+    
+    // CHEQUE E VR EM LINHAS DIFERENTES E CALCULADOS SEPARADAMENTE
+    if(document.getElementById("conf-cheque")) document.getElementById("conf-cheque").innerText = "R$ " + (formasVenda.Cheque || 0).toFixed(2);
+    if(document.getElementById("conf-vr")) document.getElementById("conf-vr").innerText = "R$ " + (formasVenda.VR || 0).toFixed(2);
+    
+    document.getElementById("conf-fiado").innerText = "R$ " + (formasVenda.Fiado || 0).toFixed(2);
+    document.getElementById("conf-sangria").innerText = "- R$ " + sangriasTotal.toFixed(2);
+    document.getElementById("conf-total-bruto").innerText = "R$ " + totalBrutoVendas.toFixed(2);
+    document.getElementById("conf-gaveta").innerText = "R$ " + dinheiroEsperadoGaveta.toFixed(2);
+
+    document.getElementById('modal-conferencia').style.display = 'flex';
+};
+
+window.fecharModalConferencia = function() {
+    fecharModal('modal-conferencia');
+    var cb = document.getElementById("codigo-barra");
+    if(cb && window.isCaixaAberto()) cb.focus();
 };
 
 window.fecharModalMisto = function() { fecharModal("modal-pagamento-misto"); };
@@ -513,7 +702,7 @@ window.confirmarPagamentoMisto = function() {
     if (fiadoMisto > 0 && clienteFiadoAtual) {
         let limite = parseFloat(clienteFiadoAtual.dados.limiteCredito) || 0;
         let dividaAtual = parseFloat(clienteFiadoAtual.dados.saldoDevedor) || 0;
-        if (limite > 0 && (dividaAtual + fiadoMisto) > limite) return window.mostrarAvisoModal(`⚠️ Crédito insuficiente para esta parte em Fiado!\nDisponível: R$ ${Math.max(0, limite - dividaAtual).toFixed(2)}`);
+        if (limite > 0 && (dividaAtual + fiadoMisto) > limite) return window.mostrarAvisoModal(`⚠️️ Crédito insuficiente para esta parte em Fiado!\nDisponível: R$ ${Math.max(0, limite - dividaAtual).toFixed(2)}`);
     }
 
     let pagamentosDetalhados = { "Pix": pix, "Crédito": credito, "Débito": debito, "Dinheiro": dinheiro, "Cheque": cheque, "VR": vr, "Fiado": fiadoMisto };
@@ -522,6 +711,7 @@ window.confirmarPagamentoMisto = function() {
 };
 
 window.reimprimirUltimoCupom = function() {
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
     var ultima = window.obterDados("ultimaVenda");
     if (!ultima) return window.mostrarAvisoModal("Nenhuma venda realizada nesta sessão.");
     window.imprimirCupom(ultima.itens, ultima.total, ultima.formaPagamento, ultima.valorRecebido !== undefined ? ultima.valorRecebido : null, ultima.pagamentosDetalhados !== undefined ? ultima.pagamentosDetalhados : null, ultima.idCupom, ultima.numeroPedido, ultima.nomeCliente, ultima.obsVenda);
@@ -582,7 +772,6 @@ window.imprimirCupom = function(itens, total, formaPagamento, valorRecebido, pag
         <div class="flex"><span>DESCONTO:</span><span>- R$ ${descontoCalculado.toFixed(2)}</span></div>`;
     }
 
-    // BLOCO DE DINHEIRO, VALOR RECEBIDO E TROCO NO CUPOM
     let trocoCupomHtml = '';
     if (formaPagamento && formaPagamento.toLowerCase() === 'dinheiro' && valorRecebido && valorRecebido > 0) {
         let calcTroco = Math.max(0, valorRecebido - parseFloat(total));
@@ -798,6 +987,7 @@ window.solicitarSenha = function(index) {
 };
 
 window.abrirModalSenhaCancelar = function() {
+  if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
   let inputSenha = document.getElementById("senha-cancelar-input");
   if(inputSenha) inputSenha.value = ""; 
   let selecionados = document.querySelectorAll("#itens-venda tr.selecionado-cancelar");
@@ -890,13 +1080,16 @@ document.addEventListener("keydown", function(event) {
           break;
     } return;
   }
+  
+  // BLOQUEIA ATALHOS SE O CAIXA ESTIVER FECHADO
   switch (event.code) {
-      case "F2": event.preventDefault(); window.abrirOpcoesPagamento(); break;
-      case "F3": event.preventDefault(); window.abrirModalDesconto(); break;
-      case "F4": event.preventDefault(); window.abrirModalSangria(); break;
-      case "F7": event.preventDefault(); abrirModalConsultaPreco(); break;
-      case "F8": event.preventDefault(); window.abrirOpcoesPagamento(); setTimeout(() => { window.reimprimirUltimoCupom(); window.fecharModalPagamento(); }, 50); break;
-      case "F9": event.preventDefault(); window.fecharCaixa(); break;
+      case "F2": event.preventDefault(); if (window.isCaixaAberto()) window.abrirOpcoesPagamento(); break;
+      case "F3": event.preventDefault(); if (window.isCaixaAberto()) window.abrirModalDesconto(); break;
+      case "F4": event.preventDefault(); if (window.isCaixaAberto()) window.abrirModalSangria(); break;
+      case "F6": event.preventDefault(); if (window.isCaixaAberto()) window.abrirModalConferencia(); break;
+      case "F7": event.preventDefault(); window.abrirModalConsultaPreco(); break;
+      case "F8": event.preventDefault(); if (window.isCaixaAberto()) { window.abrirOpcoesPagamento(); setTimeout(() => { window.reimprimirUltimoCupom(); window.fecharModalPagamento(); }, 50); } break;
+      case "F9": event.preventDefault(); if (window.isCaixaAberto()) window.fecharCaixa(); break;
       case "Escape": event.preventDefault(); window.location.href = 'sistema.html'; break;
   }
 });
@@ -911,9 +1104,13 @@ window.confirmarTroco = function() {
 };
 
 window.fecharCaixa = function() {
+  if (!window.isCaixaAberto()) return window.mostrarAvisoModal("O caixa já se encontra fechado!");
   var modal = document.getElementById('modal-senha-fechamento');
-  if (modal) { modal.style.display = 'flex'; var inputSenha = document.getElementById('input-senha-fechar'); if (inputSenha) { inputSenha.value = ''; inputSenha.focus(); } } 
-  else { window.confirmarFechamentoCaixa(); }
+  if (modal) { 
+      modal.style.display = 'flex'; 
+      var inputSenha = document.getElementById('input-senha-fechar'); 
+      if (inputSenha) { inputSenha.value = ''; setTimeout(() => inputSenha.focus(), 100); } 
+  } else { window.confirmarFechamentoCaixa(); }
 };
 window.fecharModalSenhaFechamento = function() { fecharModal('modal-senha-fechamento'); };
 
@@ -922,21 +1119,30 @@ window.confirmarFechamentoCaixa = function() {
   var senhasSys = window.obterDados("senhasSistema") || { fecharCaixa: "2201" };
   if (senha !== senhasSys.fecharCaixa) return window.mostrarAvisoModal("Senha incorreta!");
   
+  if (!window.isCaixaAberto()) {
+      window.fecharModalSenhaFechamento();
+      return window.mostrarAvisoModal("O caixa já se encontra fechado!");
+  }
+
   var dataAtualObj = new Date();
   var offset = dataAtualObj.getTimezoneOffset() * 60000;
   var dataFormatada = (new Date(dataAtualObj.getTime() - offset)).toISOString().split('T')[0];
   var horaFechamento = dataAtualObj.toLocaleTimeString();
   var operador = sessionStorage.getItem("usuarioLogado") || "Operador"; 
   
-  var suprimentoLocal = localStorage.getItem(window.obterChaveCaixa("valor_abertura"));
-  var suprimento = suprimentoLocal !== null ? parseFloat(suprimentoLocal) : 0;
+  var chaveStatusCaixa = window.obterChaveCaixa("aberto_status");
+  var chaveValorAbertura = window.obterChaveCaixa("valor_abertura");
+
+  var suprimentoDb = window.obterDados(chaveValorAbertura);
+  var suprimentoLocal = localStorage.getItem(chaveValorAbertura);
+  var suprimento = parseFloat(suprimentoDb || suprimentoLocal) || 0;
   
   var sangriasTotal = 0;
   var movimentacoes = window.obterDados("movimentacoes") || {};
   var movHoje = movimentacoes[dataFormatada] || [];
   
   movHoje.forEach(function(mov) { 
-      if ((mov.tipoMovimento === 'sangria' || mov.tipoMovimento === 'gasto' || mov.tipoMovimento === 'despesa') && mov.usuario === operador) {
+      if (mov.tipoMovimento === 'sangria' && mov.usuario === operador) {
           sangriasTotal += (parseFloat(mov.valor) || 0); 
       }
   });
@@ -960,33 +1166,85 @@ window.confirmarFechamentoCaixa = function() {
 
   var htmlFechamento = "<!DOCTYPE html><html><head><style>* { box-sizing: border-box; } @page { size: " + cssPageSize + "; margin: 0; } body { font-family: 'Courier New', Courier, monospace; font-weight: 900; font-size: " + cssFontSize + "; width: " + cssBodyWidth + "; margin: 0 auto; padding: 4px 0; color: #000; -webkit-print-color-adjust: exact; } h2, h3 { margin: 2px 0; text-align: center; font-size: " + cssTitleSize + "; font-weight: 900; text-transform: uppercase; } p { margin: 1px 0; text-align: center; font-size: " + cssFontSize + "; font-weight: 900; } .divider { border-top: 1px dashed #000; margin: 3px 0; } .right { text-align: right; } .bold { font-weight: 900; } .info-line { display: flex; justify-content: space-between; font-size: " + cssFontSize + "; font-weight: 900; margin: 1px 0; }</style></head><body><h2>" + nomeExibirFechamento + "</h2><p>CNPJ: " + configLoja.cnpj + "</p><div class='divider'></div><h3>FECHAMENTO DE CAIXA</h3><div class='divider'></div><div class='info-line'><span>Data:</span><span>" + dataAtualObj.toLocaleDateString('pt-BR') + "</span></div><div class='info-line'><span>Hora Fech:</span><span>" + horaFechamento + "</span></div><div class='info-line'><span>Operador:</span><span>" + operador + "</span></div><div class='divider'></div><h3>VENDAS POR TIPO</h3>";
   
-  Object.keys(formasVenda).forEach(function(k) { if (formasVenda[k] > 0 && k !== 'Fiado') htmlFechamento += "<div class='info-line'><span>" + k + ":</span><span>R$ " + formasVenda[k].toFixed(2) + "</span></div>"; });
+  Object.keys(formasVenda).forEach(function(k) { 
+      if (formasVenda[k] > 0 && k !== 'Fiado') {
+          htmlFechamento += "<div class='info-line'><span>" + k + ":</span><span>R$ " + formasVenda[k].toFixed(2) + "</span></div>"; 
+      }
+  });
   if(fiadoDia > 0) htmlFechamento += "<div class='divider'></div><div class='info-line bold'><span>FIADO (A Receber):</span><span>R$ " + fiadoDia.toFixed(2) + "</span></div>";
 
-  htmlFechamento += "<div class='divider'></div><h3>RESUMO FINANCEIRO</h3><div class='info-line'><span>Suprimento:</span><span>R$ " + suprimento.toFixed(2) + "</span></div><div class='info-line'><span>Sangrias:</span><span>R$ " + sangriasTotal.toFixed(2) + "</span></div><div class='info-line bold'><span>Total Bruto Recebido:</span><span>R$ " + totalBrutoVendas.toFixed(2) + "</span></div><div class='divider'></div><div class='info-line bold' style='font-size:" + cssTitleSize + ";'><span>VALOR LÍQUIDO:</span><span>R$ " + valorLiquido.toFixed(2) + "</span></div><div class='divider'></div><div class='info-line bold'><span>GAVETA:</span><span>R$ " + dinheiroEsperadoGaveta.toFixed(2) + "</span></div><p style='font-size: 8.5px;'>(Abertura + Dinheiro - Sangrias)</p><div class='divider'></div><p style='margin-top:6px; font-weight: 900;'>*** FIM DO RESUMO ***</p></body></html>";
+  htmlFechamento += "<div class='divider'></div><h3>RESUMO FINANCEIRO</h3><div class='info-line'><span>Suprimento:</span><span>R$ " + suprimento.toFixed(2) + "</span></div><div class='info-line'><span>Sangrias:</span><span>R$ " + sangriasTotal.toFixed(2) + "</span></div><div class='info-line bold'><span>Total Bruto Recebido:</span><span>R$ " + totalBrutoVendas.toFixed(2) + "</span></div><div class='divider'></div><div class='info-line bold' style='font-size:" + cssTitleSize + ";'><span>VALOR LÍQUIDO:</span><span>R$ " + valorLiquido.toFixed(2) + "</span></div><div class='divider'></div><div class='info-line bold'><span>GAVETA (Dinheiro):</span><span>R$ " + dinheiroEsperadoGaveta.toFixed(2) + "</span></div><p style='font-size: 8.5px;'>(Abertura + Dinheiro - Sangrias)</p><div class='divider'></div><p style='margin-top:6px; font-weight: 900;'>*** FIM DO RESUMO ***</p></body></html>";
 
-  var iframe = document.getElementById("iframe-impressao");
-  var doc = iframe.contentDocument || iframe.contentWindow.document;
-  doc.open(); doc.write(htmlFechamento); doc.close();
-
-  window.salvarDados("resumoFormas", { Pix: 0, Crédito: 0, Débito: 0, Dinheiro: 0, Cheque: 0, VR: 0, Fiado: 0, Misto: 0 }); 
+  // 1. SINCRONIZA O FECHO COM O FIREBASE DEFINITIVAMENTE
+  window.salvarDados(chaveStatusCaixa, "FECHADO");
+  window.salvarDados(chaveValorAbertura, "0");
   
-  localStorage.removeItem(window.obterChaveCaixa("aberto_status"));
-  localStorage.removeItem(window.obterChaveCaixa("valor_abertura"));
-  window.salvarDados("numeroPedidoAtual", 0);
-
+  localStorage.removeItem(chaveStatusCaixa);
+  localStorage.setItem(chaveStatusCaixa, "FECHADO"); 
+  localStorage.removeItem(chaveValorAbertura);
+  
+  window.salvarDados("statusCaixaAberto", false);
+  window.salvarDados("caixa_aberto_status", "FECHADO");
+  window.salvarDados("caixa_valor_abertura", "0");
+  
+  window.salvarDados("resumoFormas", { Pix: 0, Crédito: 0, Débito: 0, Dinheiro: 0, Cheque: 0, VR: 0, Fiado: 0, Misto: 0 }); 
+  window.salvarDados("numeroPedidoAtual", 1);
+  
+  // 2. ATUALIZA A TELA IMEDIATAMENTE E BLOQUEIA INTERAÇÕES
+  atualizarTopBar();
   window.fecharModalSenhaFechamento();
-  window.mostrarAvisoModal("A imprimir Resumo e a finalizar Sessão...");
-  setTimeout(function() { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(function() { window.location.replace("index.html"); }, 1500); }, 500);
+  window.mostrarAvisoModal("Imprimindo Resumo e Finalizando Sessão...");
+
+  // 3. IMPRIME E REDIRECIONA
+  try {
+      var iframe = document.getElementById("iframe-impressao");
+      if (!iframe) {
+          iframe = document.createElement("iframe");
+          iframe.id = "iframe-impressao";
+          iframe.style.display = "none";
+          document.body.appendChild(iframe);
+      }
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open(); 
+      doc.write(htmlFechamento); 
+      doc.close();
+
+      setTimeout(function() { 
+          try {
+              iframe.contentWindow.focus(); 
+              iframe.contentWindow.print(); 
+          } catch(e) { console.error("Erro no print:", e); }
+          setTimeout(function() { 
+              window.location.replace("sistema.html"); 
+          }, 1500); 
+      }, 500);
+  } catch(e) {
+      console.error("Falha ao criar layout de impressão:", e);
+      setTimeout(function() { window.location.replace("sistema.html"); }, 1000);
+  }
 };
 
-window.abrirModalAbertura = function() { document.getElementById('modal-abertura').style.display = 'flex'; };
+window.abrirModalAbertura = function() { 
+    var modal = document.getElementById('modal-abertura');
+    if (modal) {
+        modal.style.zIndex = '99999999';
+        modal.style.display = 'flex'; 
+        setTimeout(() => document.getElementById("valor-abertura").focus(), 100);
+    }
+};
+
 window.confirmarAbertura = function() {
   var valor = parseFloat(document.getElementById('valor-abertura').value);
   if (isNaN(valor) || valor < 0) return window.mostrarAvisoModal("Valor inválido");
   
-  localStorage.setItem(window.obterChaveCaixa("aberto_status"), "ABERTO");
-  localStorage.setItem(window.obterChaveCaixa("valor_abertura"), valor.toFixed(2));
+  var chaveSt = window.obterChaveCaixa("aberto_status");
+  var chaveVal = window.obterChaveCaixa("valor_abertura");
+  
+  window.salvarDados(chaveSt, "ABERTO");
+  window.salvarDados(chaveVal, valor.toFixed(2));
+  
+  localStorage.setItem(chaveSt, "ABERTO");
+  localStorage.setItem(chaveVal, valor.toFixed(2));
   
   let numAtual = parseInt(window.obterDados("numeroPedidoAtual"));
   if (isNaN(numAtual) || numAtual <= 0) window.salvarDados("numeroPedidoAtual", 1);
@@ -994,6 +1252,9 @@ window.confirmarAbertura = function() {
   fecharModal('modal-abertura');
   atualizarTopBar();
   inicializarCaixaCompleto();
+  
+  vendaAtual = [];
+  atualizarTabela();
 };
 
 window.abrirModalEstoque = function() {
@@ -1075,4 +1336,112 @@ window.handleInputCaixaSearch = function(termo) {
       container.appendChild(div);
   });
   container.style.display = 'block';
+};
+
+// ==========================================
+// 1. FUNÇÃO DE IMPRESSÃO DO COMPROVANTE DE SANGRIA
+// ==========================================
+window.imprimirComprovanteSangria = function(operador, valor, motivo, dataHora) {
+    let config = window.obterDados ? window.obterDados('configEmpresa') : {};
+    let nomeEmpresa = config.nomeCabecalho || "NOME DA LOJA";
+    let tamanhoPapel = config.tamanhoImpressora === '80' ? '80mm' : '58mm';
+
+    let htmlStr = `
+    <html><head><style>
+        @page { margin: 0; }
+        body { font-family: 'Courier New', Courier, monospace; width: ${tamanhoPapel}; padding: 2mm; font-size: 12px; margin: 0; color: #000; font-weight: 900; }
+        .center { text-align: center; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        .flex { display: flex; justify-content: space-between; }
+        h3 { margin: 0 0 5px 0; font-size: 15px; text-transform: uppercase; }
+        p { margin: 3px 0; font-size: 11px; }
+    </style></head><body>
+        <div class="center">
+            <h3>${nomeEmpresa}</h3>
+            <p>COMPROVANTE DE SANGRIA</p>
+        </div>
+        <div class="line"></div>
+        <div>Data/Hora: ${dataHora}</div>
+        <div>Operador: ${operador}</div>
+        <div class="line"></div>
+        <p style="font-size: 13px;">MOTIVO:</p>
+        <p style="font-size: 14px; font-weight: bold;">${motivo.toUpperCase()}</p>
+        <div class="line"></div>
+        <div class="flex" style="font-size: 15px;"><span>VALOR RETIRADO:</span><span>R$ ${valor.toFixed(2)}</span></div>
+        <div class="line"></div>
+        <div class="center" style="margin-top: 25px;">
+            <p>___________________________________</p>
+            <p>Assinatura do Operador</p>
+        </div>
+        <script>setTimeout(() => { window.print(); }, 800);<\/script>
+    </body></html>`;
+
+    let iframe = document.getElementById("iframe-impressao");
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.id = "iframe-impressao";
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+    }
+    let doc = iframe.contentWindow.document;
+    doc.open(); doc.write(htmlStr); doc.close();
+};
+
+// ==========================================
+// 2. FUNÇÃO DE CONFIRMAÇÃO DA SANGRIA
+// ==========================================
+window.abrirModalSangria = function() { 
+    if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
+    document.getElementById("modal-sangria").style.display = "flex"; 
+    document.getElementById("senha-sangria").value = "";
+    document.getElementById("valor-sangria").value = "";
+    document.getElementById("motivo-sangria").value = "";
+    setTimeout(() => document.getElementById("senha-sangria").focus(), 100); 
+};
+
+window.fecharModalSangria = function() { fecharModal("modal-sangria"); };
+
+window.confirmarSangria = function() {
+    var senhaDigitada = document.getElementById("senha-sangria").value;
+    var valor = parseFloat(document.getElementById("valor-sangria").value);
+    var motivo = document.getElementById("motivo-sangria").value.trim();
+    
+    var senhasSys = window.obterDados("senhasSistema") || null;
+    var senhaCorreta = senhasSys && senhasSys.master ? senhasSys.master : "1996"; 
+
+    if (senhaDigitada !== senhaCorreta) {
+        return window.mostrarAvisoModal("⚠️ Palavra-passe Master Incorreta!", "Acesso Negado");
+    }
+
+    if (isNaN(valor) || valor <= 0 || !motivo) {
+        return window.mostrarAvisoModal("Preencha um valor válido e o motivo da sangria.");
+    }
+
+    var data = new Date();
+    var offset = data.getTimezoneOffset() * 60000;
+    var dataAtual = (new Date(data.getTime() - offset)).toISOString().split('T')[0];
+    var horaAtual = data.toLocaleTimeString();
+    var operador = sessionStorage.getItem("usuarioLogado") || "desconhecido";
+    
+    var movimentacoes = window.obterDados("movimentacoes") || {};
+    if (!movimentacoes[dataAtual]) movimentacoes[dataAtual] = [];
+    
+    movimentacoes[dataAtual].push({ 
+        tipoMovimento: 'sangria', 
+        produto: 'SANGRIA: ' + motivo, 
+        valor: valor, 
+        quantidade: 1, 
+        hora: horaAtual, 
+        formaPagamento: 'Dinheiro', 
+        usuario: operador, 
+        data: dataAtual 
+    });
+    
+    window.salvarDados("movimentacoes", movimentacoes);
+    
+    // Dispara a impressão do comprovante corretamente
+    window.imprimirComprovanteSangria(operador, valor, motivo, data.toLocaleDateString('pt-BR') + ' ' + horaAtual);
+    
+    window.mostrarAvisoModal("Sangria registrada e comprovante impresso com sucesso!", "Sangria Realizada");
+    window.fecharModalSangria();
 };
