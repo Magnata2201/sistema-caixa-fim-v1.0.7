@@ -138,7 +138,7 @@
 <body id="painel-body">
 
     <header id="main-header-bar">
-        <div class="header-logo"><span id="header-nome-empresa">🛒 BEKAS BURGUER - Estoque</span></div>
+        <div class="header-logo"><span id="header-nome-empresa">🛒 </span></div>
         <div class="header-actions">
             <button id="btn-backup-export" onclick="exportarBackup()" class="btn-top">📤 Backup</button>
             <input type="file" id="inputBackup" style="display:none" onchange="importarBackup(event)" accept=".json" />
@@ -172,28 +172,28 @@
 
         <div class="dashboard-grid">
              <div id="card-todos_produtos" class="dash-card card-lista" onclick="window.location.href='todos-produtos.html'">
-                <div class="card-icon">📦</div><h3>Todos os Produtos</h3><p>Visualizar catálogo completo</p>
+                <div class="card-icon">📦</div><h3>Todos os Produtos</h3><p>Visualizar todos os produtos cadastraos</p>
             </div>
              <div id="card-caixa" class="dash-card card-cupons" onclick="window.location.href='caixa.html'">
-                <div class="card-icon">🧾</div><h3>Frente de Caixa</h3><p>Realizar vendas e emitir talão</p>
+                <div class="card-icon">🧾</div><h3>Frente de Caixa</h3><p>Realizar vendas/Emição de comprovante</p>
             </div>
             <div id="card-cupons" class="dash-card card-cupons" onclick="window.location.href='cupons.html'">
-                <div class="card-icon">🏷️</div><h3>Gerenciar Cupom</h3><p>Reimprimir ou cancelar recibos</p>
+                <div class="card-icon">🏷️</div><h3>Gerenciar Cupom</h3><p>Reimprimir ou cancelar cupom</p>
             </div>
             <div id="card-cozinha" class="dash-card card-alerta" style="border-left-color: #e67e22; display: none;" onclick="window.location.href='cozinha.html'">
-                <div class="card-icon">👨‍🍳</div><h3>Monitor da Cozinha</h3><p>Acompanhar pedidos (KDS)</p>
+                <div class="card-icon">👨‍🍳</div><h3>Monitor da Cozinha</h3><p>Acompanhar pedidos cozinha</p>
             </div>
             <div id="card-fiado" class="dash-card card-alerta" style="border-left-color: #c2185b;" onclick="window.location.href='clientes.html'">
-                <div class="card-icon">📒</div><h3>Gestão de Clientes</h3><p>Contas correntes e Clube Fidelidade</p>
+                <div class="card-icon">📒</div><h3>Gestão de Clientes</h3><p>Grediario e Clube Fidelidade</p>
             </div>
             <div id="card-gerenciar_produto" class="dash-card card-estoque" onclick="abrirModalGerenciarProduto()">
-                <div class="card-icon">🔄</div><h3>Gerenciar Produto</h3><p>Consultar qtd, cadastrar e etiquetas</p>
+                <div class="card-icon">🔄</div><h3>Gerenciar Produto</h3><p>Consultas, cadastrar e etiquetas</p>
             </div>
             <div id="card-fim_estoque" class="dash-card card-alerta" onclick="window.location.href='fim_estoque.html'">
-                <div class="card-icon">⚠️</div><h3>Fim de Estoque</h3><p>Relatório de produtos esgotando</p>
+                <div class="card-icon">⚠️</div><h3>Fim de Estoque</h3><p>Relatório de estoque baixo</p>
             </div>
             <div id="card-faturamento" class="dash-card card-financeiro" onclick="window.location.href='faturamento.html'">
-                <div class="card-icon">💰</div><h3>Faturamento Líquido</h3><p>Painel de lucros e despesas</p>
+                <div class="card-icon">💰</div><h3>Faturamento Líquido</h3><p>Painel financeiro</p>
             </div>
             <div id="card-relatorio" class="dash-card card-relatorio" onclick="window.location.href='relatorio.html'">
                 <div class="card-icon">📅</div><h3>Relatório Diário</h3><p>Resumo de caixa do dia</p>
