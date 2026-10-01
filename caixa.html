@@ -17,22 +17,12 @@
       window.sairDoSistema = window.logoutUsuario;
   </script>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Frente de Caixa</title>
   <link rel="icon" href="icon.ico" type="image/x-icon">
   <link rel="stylesheet" href="caixa.css" />
   <script type="module" src="firebase-banco.js"></script>
   <style>
-      body { overflow: hidden; margin: 0; padding: 0; }
-      .container { display: flex; height: calc(100vh - 80px); overflow: hidden; padding-bottom: 10px; }
-      .esquerda { display: flex; flex-direction: column; height: 100%; overflow: visible !important; }
-      .direita { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-      .input-section { flex: 1; overflow-y: visible; padding-right: 10px; position: relative; }
-      .botoes-caixa { flex-shrink: 0; margin-top: 15px; }
-      .product-table-section { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-      .table-wrapper { flex: 1; overflow-y: auto; margin-top: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; }
-      .table-wrapper table { width: 100%; border-collapse: collapse; }
-      .table-wrapper thead th { position: sticky; top: 0; background: #f1f5f9; color: #000000 !important; font-weight: bold; padding: 10px 5px; z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-      #itens-venda tr { cursor: pointer; }
       #itens-venda tr.selecionado-cancelar { background-color: #fee2e2 !important; }
       .modal-cancelamento-content { background: #ffffff; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); text-align: center; box-sizing: border-box; }
       .modal-cancelamento-content h3 { margin-top: 0; color: #1e293b; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
@@ -41,10 +31,9 @@
       .btn-cancelar-acao { flex: 1; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
       .btn-cancelar-voltar { background: #e2e8f0; color: #475569; }
       .btn-cancelar-confirmar { background: #4b5563; color: #ffffff; }
-      .suggestions-caixa { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 350px; overflow-y: auto; z-index: 999999; display: none; text-align: left; }
+      .suggestions-caixa { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 250px; overflow-y: auto; z-index: 999999; display: none; text-align: left; }
       .suggestion-item-caixa { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; transition: all 0.2s ease; }
       .suggestion-item-caixa:hover { background-color: #f8fafc; color: #1e293b; border-left: 4px solid #4b5563; padding-left: 18px; }
-      .suggestion-item-caixa:last-child { border-bottom: none; }
       .suggestion-item-caixa.ativo { background-color: #e2e8f0; color: #1e293b; border-left: 4px solid #4b5563; padding-left: 18px; font-weight: bold; }
   </style>
 </head>
@@ -98,15 +87,16 @@
       </div>
       
       <div class="botoes-caixa">
-        <button onclick="window.abrirOpcoesPagamento()">✅ Finalizar Venda [F2]</button>
-        <button onclick="window.abrirModalSenhaCancelar()" style="background: #c0392b; color: white;">❌ Cancelar Selecionados</button>
+        <button onclick="window.abrirOpcoesPagamento()">✅ Finalizar [F2]</button>
+        <button onclick="window.abrirModalSenhaCancelar()">❌ Cancelar Itens</button>
         <button onclick="window.fecharCaixa()">📦 Fechar Caixa [F9]</button>
         <button onclick="window.abrirModalSangria()">➖ Sangria [F4]</button>
+        <button onclick="window.abrirModalConferencia()">📊 Conferir [F6]</button>
         <button onclick="window.reimprimirUltimoCupom()">🖨️ Reimprimir [F8]</button>
-        <button id="btn-desconto" onclick="window.abrirModalDesconto()">Desconto [F3]</button>
-        <button style="background: #8e44ad; color: white;" onclick="abrirModalConsultaPreco()">💲 Consultar Preço [F7]</button>
-        <button style="background: #2980b9; color: white;" onclick="window.abrirModalEstoque()">🔍 Consultar Estoque</button>
-        <button style="background: #e74c3c; color: white;" onclick="window.location.href='sistema.html'">⬅ Voltar Sistema [ESC]</button>
+        <button id="btn-desconto" style="background: #34495e; color: white;" onclick="window.abrirModalDesconto()">Desconto [F3]</button>
+        <button style="background: #8e44ad; color: white;" onclick="abrirModalConsultaPreco()">💲 Preço [F7]</button>
+        <button style="background: #2c3e50; color: white;" onclick="window.abrirModalEstoque()">🔍 Estoque</button>
+        <button style="background: #7f8c8d; color: white;" onclick="window.location.href='sistema.html'">⬅ Voltar [ESC]</button>
       </div>
     </div>
 
@@ -134,7 +124,110 @@
     </div>
   </div>
 
-  <!-- MODAIS DO SISTEMA -->
+  <!-- MODAIS PROFISSIONAIS DO SISTEMA -->
+  
+  <div id="modal-abertura" class="modal">
+      <div class="modal-content" style="max-width: 400px; padding: 0; overflow: hidden;">
+          <div style="background: #27ae60; color: white; padding: 20px; text-align: center;">
+              <h3 style="margin: 0; font-size: 20px;">💵 Abertura de Caixa</h3>
+          </div>
+          <div style="padding: 20px;">
+              <label style="font-weight: bold; color: #34495e; font-size: 14px;">Valor de Abertura (Fundo de Troco):</label>
+              <input type="number" step="0.01" id="valor-abertura" placeholder="R$ 0,00" style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 18px; text-align: center; font-weight: bold; outline: none; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') window.confirmarAbertura()" />
+              <div style="display: flex; gap: 10px;">
+                  <button onclick="fecharModal('modal-abertura')" style="flex: 1; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Cancelar</button>
+                  <button onclick="window.confirmarAbertura()" style="flex: 2; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Confirmar Abertura</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div id="modal-senha-fechamento" class="modal">
+      <div class="modal-content" style="max-width: 400px; padding: 0; overflow: hidden;">
+          <div style="background: #c0392b; color: white; padding: 20px; text-align: center;">
+              <h3 style="margin: 0; font-size: 20px;">🔐 Fechar Caixa</h3>
+              <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9;">O turno será encerrado e o resumo impresso.</p>
+          </div>
+          <div style="padding: 20px;">
+              <label style="font-weight: bold; color: #34495e; font-size: 14px;">Palavra-passe de Fechamento:</label>
+              <input type="password" id="input-senha-fechar" placeholder="******" autocomplete="new-password" style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 18px; text-align: center; letter-spacing: 3px; outline: none; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') window.confirmarFechamentoCaixa()" />
+              <div style="display: flex; gap: 10px;">
+                  <button onclick="window.fecharModalSenhaFechamento()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Cancelar</button>
+                  <button onclick="window.confirmarFechamentoCaixa()" style="flex: 2; padding: 12px; background: #c0392b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Finalizar Sessão</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+<div id="modal-sangria" class="modal">
+      <div class="modal-content" style="max-width: 400px; padding: 0; overflow: hidden;">
+          <div style="background: #e67e22; color: white; padding: 20px; text-align: center;">
+              <h3 style="margin: 0; font-size: 20px;">➖ Registrar Sangria</h3>
+              <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9;">Retirada de dinheiro da gaveta com comprovante.</p>
+          </div>
+          <div style="padding: 20px; text-align: left;">
+              <label style="font-weight: bold; color: #34495e; font-size: 13px;">Senha Master (Administrador):</label>
+              <input type="password" id="senha-sangria" placeholder="******" autocomplete="new-password" style="width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; text-align: center; letter-spacing: 3px; outline: none; box-sizing: border-box;" />
+
+              <label style="font-weight: bold; color: #34495e; font-size: 13px;">Valor da Sangria (R$):</label>
+              <input type="number" step="0.01" id="valor-sangria" placeholder="0.00" style="width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: bold; outline: none; box-sizing: border-box;" />
+              
+              <label style="font-weight: bold; color: #34495e; font-size: 13px;">Motivo da Retirada:</label>
+              <input type="text" id="motivo-sangria" placeholder="Ex: Pagamento fornecedor, Troco..." style="width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') window.confirmarSangria()" />
+              
+              <div style="display: flex; gap: 10px;">
+                  <button onclick="window.fecharModalSangria()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Cancelar</button>
+                  <button onclick="window.confirmarSangria()" style="flex: 2; padding: 12px; background: #e67e22; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Confirmar e Imprimir</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div id="modal-desconto" class="modal">
+      <div class="modal-content" style="max-width: 400px; padding: 0; overflow: hidden;">
+          <div style="background: #34495e; color: white; padding: 20px; text-align: center;">
+              <h3 style="margin: 0; font-size: 20px;">📉 Aplicar Desconto</h3>
+              <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9;">Total da Venda: <strong style="color: #f1c40f;">R$ <span id="desconto-valor-total-venda">0.00</span></strong></p>
+          </div>
+          <div style="padding: 20px; text-align: left;">
+              <label style="font-weight: bold; color: #34495e; font-size: 13px;">Senha de Autorização (Admin):</label>
+              <input type="password" id="senha-desconto" placeholder="******" autocomplete="new-password" style="width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; text-align: center; letter-spacing: 3px; outline: none; box-sizing: border-box;" onkeypress="if(event.key === 'Enter') document.getElementById('valor-desconto').focus()">
+              
+              <label style="font-weight: bold; color: #34495e; font-size: 13px;">Valor do Desconto (R$):</label>
+              <input type="number" id="valor-desconto" placeholder="Ex: 5.00" step="0.01" style="width: 100%; padding: 12px; margin-top: 5px; margin-bottom: 20px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; font-weight: bold; outline: none; box-sizing: border-box; color: #e74c3c;" onkeypress="if(event.key === 'Enter') window.confirmarDesconto()">
+              
+              <div style="display: flex; gap: 10px;">
+                  <button onclick="window.fecharModalDesconto()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Cancelar</button>
+                  <button onclick="window.confirmarDesconto()" style="flex: 2; padding: 12px; background: #34495e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Aplicar Desconto</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div id="modal-conferencia" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <span class="close-button" onclick="window.fecharModalConferencia()">&times;</span>
+      <h3 style="border-bottom: 2px solid #1abc9c; padding-bottom: 10px; color: #2c3e50; margin-top: 0;">📊 Conferência do Caixa</h3>
+      <div style="margin-top: 15px; font-size: 14px; color: #34495e; text-align: left;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>💵 Fundo de Troco (Abertura):</span> <strong id="conf-abertura">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>💵 Vendas em Dinheiro:</span> <strong id="conf-dinheiro">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>💠 Vendas no Pix:</span> <strong id="conf-pix">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>💳 Cartão de Crédito:</span> <strong id="conf-credito">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>💳 Cartão de Débito:</span> <strong id="conf-debito">R$ 0.00</strong></div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>📝 Cheque:</span> <strong id="conf-cheque">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>🎫 VR (Vale Refeição):</span> <strong id="conf-vr">R$ 0.00</strong></div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>📒 Crédito (A Receber):</span> <strong id="conf-fiado" style="color: #c2185b;">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #e74c3c;"><span>➖ Sangrias / Retiradas:</span> <strong id="conf-sangria">- R$ 0.00</strong></div>
+        <hr style="border: 0; border-top: 1px dashed #ccc; margin: 15px 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px;"><span><strong>💰 Total Bruto de Vendas:</strong></span> <strong id="conf-total-bruto" style="color: #27ae60;">R$ 0.00</strong></div>
+        <div style="display: flex; justify-content: space-between; font-size: 17px; margin-top: 15px; padding: 12px; background: #ecf0f1; border-radius: 8px; align-items: center;"><span><strong>🛑 Em Gaveta (Dinheiro):</strong></span> <strong id="conf-gaveta" style="color: #2980b9;">R$ 0.00</strong></div>
+      </div>
+      <button onclick="window.fecharModalConferencia()" class="btn-cancelar" style="width: 100%; padding: 12px; margin-top: 20px; background: #95a5a6; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer;">Fechar Tela</button>
+    </div>
+  </div>
+
   <div id="modal-consulta-preco" class="modal">
     <div class="modal-content">
       <span class="close-button" onclick="fecharModalConsultaPreco()">&times;</span>
@@ -144,15 +237,6 @@
           Aguardando produto...
       </div>
       <button onclick="buscarPrecoModal()" class="confirm">🔍 Buscar</button>
-    </div>
-  </div>
-
-  <div id="modal-abertura" class="modal">
-    <div class="modal-content">
-      <h3>💵 Abertura de Caixa 💵</h3>
-      <label>Valor de Abertura (Gaveta):</label>
-      <input type="number" step="0.01" id="valor-abertura" placeholder="Ex: 100.00" />
-      <button onclick="window.confirmarAbertura()" class="confirm">Confirmar Abertura</button>
     </div>
   </div>
 
@@ -185,16 +269,6 @@
               <button class="btn-confirmar" style="flex: 2; padding: 12px; background: #059669; color: white; font-size: 14px; font-weight: bold; border-radius: 8px; border: none; cursor: pointer;" onclick="window.confirmarPagamentoPix()">✅ Confirmar e Imprimir [Enter]</button>
           </div>
       </div>
-  </div>
-
-  <div id="modal-senha-fechamento" class="modal">
-    <div class="modal-content">
-      <span class="close-button" onclick="window.fecharModalSenhaFechamento()">&times;</span>
-      <h3>🔐 Fechar Caixa</h3>
-      <input type="password" id="input-senha-fechar" placeholder="Digite a senha de fechamento" autocomplete="new-password" />
-      <button onclick="window.confirmarFechamentoCaixa()" class="confirm">Confirmar e Imprimir Resumo</button>
-      <button onclick="window.fecharModalSenhaFechamento()" class="cancel">Cancelar</button>
-    </div>
   </div>
 
   <div id="modal-troco" class="modal">
@@ -246,33 +320,6 @@
           <button type="button" onclick="window.fecharModalSenhaCancelar()" class="btn-cancelar-acao btn-cancelar-voltar">Voltar</button>
           <button type="button" onclick="window.confirmarCancelamentoMultiplo()" class="btn-cancelar-acao btn-cancelar-confirmar">Confirmar</button>
       </div>
-    </div>
-  </div>
-
-  <div id="modal-sangria" class="modal">
-    <div class="modal-content">
-      <span class="close-button" onclick="window.fecharModalSangria()">&times;</span>
-      <h3>Remover Valor (Sangria)</h3>
-      <label>Valor (R$):</label>
-      <input type="number" step="0.01" id="valor-sangria" />
-      <label>Motivo da Sangria:</label>
-      <input type="text" id="motivo-sangria" placeholder="Ex: Pagamento de conta" />
-      <button onclick="window.confirmarSangria()" class="confirm">Confirmar Sangria</button>
-      <button onclick="window.fecharModalSangria()" class="cancel">Cancelar</button>
-    </div>
-  </div>
-
-  <div id="modal-desconto" class="modal">
-    <div class="modal-content">
-        <span class="modal-close-button" onclick="window.fecharModalDesconto()">&times;</span>
-        <h3>Aplicar Desconto</h3>
-        <p><strong>Total da Venda:</strong> R$ <span id="desconto-valor-total-venda">0.00</span></p>
-        <label>Senha de Administrador:</label>
-        <input type="password" id="senha-desconto" placeholder="Digite a palavra-passe" autocomplete="new-password" onkeypress="if(event.key === 'Enter') document.getElementById('valor-desconto').focus()">
-        <label>Valor do Desconto (R$):</label>
-        <input type="number" id="valor-desconto" placeholder="Ex: 5.00" step="0.01" onkeypress="if(event.key === 'Enter') window.confirmarDesconto()">
-        <button class="confirm" onclick="window.confirmarDesconto()">Aplicar Desconto</button>
-        <button class="cancel" onclick="window.fecharModalDesconto()">Cancelar</button>
     </div>
   </div>
 
