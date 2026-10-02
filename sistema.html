@@ -487,18 +487,23 @@
     <!-- ====================================================== -->
     <div id="modalRegistrarProdutoSistema" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
         <div class="modal-content" style="background: #ffffff; padding: 30px; border-radius: 10px; width: 90%; max-width: 680px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: 1px solid #dee2e6;">
-            <h2 style="color: #212529; margin-top: 0; border-bottom: 2px solid #343a40; padding-bottom: 12px; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">📦 Gerenciar Produto</h2>
+            
+            <!-- CABEÇALHO DO MODAL COM BOTÃO VOLTAR PADRÃO -->
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #343a40; padding-bottom: 12px; margin-bottom: 20px;">
+                <h2 style="color: #212529; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">📦 Gerenciar Produto</h2>
+                <button onclick="document.getElementById('modalRegistrarProdutoSistema').style.display='none'" style="background-color: #34495e; color: #ffffff; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s;">Voltar</button>
+            </div>
             
             <div class="form-row" style="margin-top: 15px;">
                 <div class="form-col" style="flex: 2;">
-                    <label style="color: #495057; font-weight: 600;">Código ou Nome do Produto:</label>
-                    <div class="input-group" style="position: relative;">
-                        <input type="text" id="newBarcodeModal" placeholder="Bipe, código ou digite o nome..." autocomplete="off" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; font-weight: bold; background: #f8f9fa; color: #212529; outline: none;" oninput="pesquisarProdutosModalGerenciar(this.value)" onkeypress="if(event.key === 'Enter') buscarProdutoUnified()">
-                        <button onclick="buscarProdutoUnified()" style="padding: 11px 16px; background: #495057; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">🔍 Buscar</button>
-                        <button onclick="gerarCodigoBarras('newBarcodeModal')" style="padding: 11px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">🎲 Gerar</button>
+                    <label style="color: #495057; font-weight: 600; margin-bottom: 5px; display: block;">Código ou Nome do Produto:</label>
+                    <div class="input-group" style="position: relative; display: flex; align-items: center; gap: 5px;">
+                        <input type="text" id="newBarcodeModal" placeholder="Bipe, código ou nome..." autocomplete="off" style="width: 220px; height: 42px; flex: 0 0 auto; padding: 0 12px; border-radius: 6px; border: 1px solid #ced4da; font-weight: bold; background: #f8f9fa; color: #212529; outline: none; box-sizing: border-box;" oninput="pesquisarProdutosModalGerenciar(this.value)" onkeypress="if(event.key === 'Enter') buscarProdutoUnified()">
+                        <button onclick="buscarProdutoUnified()" style="height: 42px; padding: 0 16px; background: #495057; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;">🔍 Buscar</button>
+                        <button onclick="gerarCodigoBarras('newBarcodeModal')" style="height: 42px; padding: 0 16px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;">🎲 Gerar</button>
                         
                         <!-- LEQUE / DROPDOWN DE SUGESTÕES -->
-                        <div id="lista-sugestoes-gerenciar" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 200px; overflow-y: auto; z-index: 999999; display: none; text-align: left;"></div>
+                        <div id="lista-sugestoes-gerenciar" style="position: absolute; top: calc(100% + 4px); left: 0; width: 320px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 200px; overflow-y: auto; z-index: 999999; display: none; text-align: left;"></div>
                     </div>
                 </div>
             </div>
@@ -563,7 +568,7 @@
             <input type="range" id="transparencia-cards" min="0.5" max="1" step="0.05" value="1" style="width: 100%; margin-top: 10px; cursor: pointer;">
             <p style="font-size: 11px; color: #777; margin-top: 5px;">Ajuste para criar efeito de vidro caso use Imagem de Fundo.</p>
 
-            <button onclick="salvarCoresTema()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; margin-top: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(40,167,69,0.3);">✔️️ Aplicar Cores e Opacidade</button>
+            <button onclick="salvarCoresTema()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; margin-top: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(40,167,69,0.3);">✔️ Aplicar Cores e Opacidade</button>
             
             <hr style="margin: 25px 0; border: 0; border-top: 1px solid #ddd;">
             
@@ -739,7 +744,7 @@
             container.innerHTML = '';
             encontrados.forEach(item => {
                 let div = document.createElement('div');
-                div.style.cssText = "padding: 8px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px;";
+                div.style.cssText = "padding: 8px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: #fff;";
                 div.innerHTML = `<div style="display:flex; flex-direction:column; text-align:left;"><strong style="color:#212529;">${item.p.nome}</strong><span style="color:#6c757d; font-size:11px;">Cód: ${item.codigo} | Estoque: ${item.p.quantidade || 0}</span></div><strong style="color:#212529;">R$ ${(parseFloat(item.p.valor) || 0).toFixed(2)}</strong>`;
                 div.onmouseover = function() { this.style.background = '#f8f9fa'; };
                 div.onmouseout = function() { this.style.background = '#fff'; };
