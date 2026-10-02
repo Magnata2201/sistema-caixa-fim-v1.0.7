@@ -408,10 +408,10 @@ function criarUsuario() {
     let usuarios = obterDados('usuarios') || [];
     if (usuarios.find(u => u.usuario === nome)) return showMessage("Usuário já existe!", true);
     
-    usuarios.push({ 
+usuarios.push({ 
         usuario: nome, senha: senha, role: 'operador',
         permissoes: { 
-            caixa: false, cupons: false, cozinha: false, fidelidade: false, fiado: false, registrar_produto: false, todos_produtos: false, 
+            caixa: false, cupons: false, cozinha: false, fidelidade: false, fiado: false, gerenciar_produto: false, todos_produtos: false, 
             verificar_quantidade: false, fim_estoque: false, faturamento: false, relatorio: false, 
             conectar_firebase: false, apagar_tudo: false, config_empresa: false, criar_usuario: false, 
             editar_usuario: false, excluir_usuario: false, ver_usuarios: false 
@@ -509,7 +509,7 @@ function carregarPermissoesUsuario() {
     const p = (user && user.permissoes) ? user.permissoes : {};
 
     const permissoesArray = [
-        'caixa', 'cupons', 'cozinha', 'fidelidade', 'fiado', 'registrar_produto', 
+        'caixa', 'cupons', 'cozinha', 'fidelidade', 'fiado', 'gerenciar_produto', 
         'todos_produtos', 'verificar_quantidade', 'fim_estoque', 'faturamento', 
         'relatorio', 'conectar_firebase', 'apagar_tudo', 'config_empresa', 
         'criar_usuario', 'editar_usuario', 'excluir_usuario', 'ver_usuarios'
@@ -532,12 +532,12 @@ function salvarPermissoesUsuario() {
     
     if (index !== -1) {
         let novasPermissoes = {};
-        const permissoesArray = [
-            'caixa', 'cupons', 'cozinha', 'fidelidade', 'fiado', 'registrar_produto', 
-            'todos_produtos', 'verificar_quantidade', 'fim_estoque', 'faturamento', 
-            'relatorio', 'conectar_firebase', 'apagar_tudo', 'config_empresa', 
-            'criar_usuario', 'editar_usuario', 'excluir_usuario', 'ver_usuarios'
-        ];
+       const permissoesArray = [
+        'caixa', 'cupons', 'cozinha', 'fidelidade', 'fiado', 'gerenciar_produto', 
+        'todos_produtos', 'verificar_quantidade', 'fim_estoque', 'faturamento', 
+        'relatorio', 'conectar_firebase', 'apagar_tudo', 'config_empresa', 
+        'criar_usuario', 'editar_usuario', 'excluir_usuario', 'ver_usuarios'
+    ];
 
         permissoesArray.forEach(k => {
             const el = document.getElementById('perm-' + k);
@@ -593,7 +593,7 @@ function aplicarPermissoesPainel() {
         if(document.getElementById('card-cozinha')) document.getElementById('card-cozinha').style.display = (configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
         if(document.getElementById('card-fidelidade')) document.getElementById('card-fidelidade').style.display = (configEmp.usarFidelidade && isAtivoSaaS('mod_fidelidade')) ? 'block' : 'none';
         if(document.getElementById('card-fiado')) document.getElementById('card-fiado').style.display = (configEmp.usarFiado !== false && isAtivoSaaS('mod_fiado')) ? 'block' : 'none';
-        if(document.getElementById('card-registrar_produto')) document.getElementById('card-registrar_produto').style.display = isAtivoSaaS('mod_registrar_produto') ? 'block' : 'none';
+        if(document.getElementById('card-gerenciar_produto')) document.getElementById('card-gerenciar_produto').style.display = isAtivoSaaS('mod_gerenciar_produto') ? 'block' : 'none';
         if(document.getElementById('card-todos_produtos')) document.getElementById('card-todos_produtos').style.display = isAtivoSaaS('mod_todos_produtos') ? 'block' : 'none';
         if(document.getElementById('card-verificar_quantidade')) document.getElementById('card-verificar_quantidade').style.display = isAtivoSaaS('mod_verificar_quantidade') ? 'block' : 'none';
         if(document.getElementById('card-fim_estoque')) document.getElementById('card-fim_estoque').style.display = isAtivoSaaS('mod_fim_estoque') ? 'block' : 'none';
@@ -614,7 +614,7 @@ function aplicarPermissoesPainel() {
     if(document.getElementById('card-cozinha')) document.getElementById('card-cozinha').style.display = (p.cozinha && configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
     if(document.getElementById('card-fidelidade')) document.getElementById('card-fidelidade').style.display = (p.fidelidade && configEmp.usarFidelidade && isAtivoSaaS('mod_fidelidade')) ? 'block' : 'none';
     if(document.getElementById('card-fiado')) document.getElementById('card-fiado').style.display = (p.fiado && configEmp.usarFiado !== false && isAtivoSaaS('mod_fiado')) ? 'block' : 'none';
-    if(document.getElementById('card-registrar_produto')) document.getElementById('card-registrar_produto').style.display = (p.registrar_produto && isAtivoSaaS('mod_registrar_produto')) ? 'block' : 'none';
+    if(document.getElementById('card-gerenciar_produto')) document.getElementById('card-gerenciar_produto').style.display = (p.gerenciar_produto && isAtivoSaaS('mod_gerenciar_produto')) ? 'block' : 'none';
     if(document.getElementById('card-todos_produtos')) document.getElementById('card-todos_produtos').style.display = (p.todos_produtos && isAtivoSaaS('mod_todos_produtos')) ? 'block' : 'none';
     if(document.getElementById('card-verificar_quantidade')) document.getElementById('card-verificar_quantidade').style.display = (p.verificar_quantidade && isAtivoSaaS('mod_verificar_quantidade')) ? 'block' : 'none';
     if(document.getElementById('card-fim_estoque')) document.getElementById('card-fim_estoque').style.display = (p.fim_estoque && isAtivoSaaS('mod_fim_estoque')) ? 'block' : 'none';
