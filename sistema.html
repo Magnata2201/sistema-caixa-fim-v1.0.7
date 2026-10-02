@@ -65,6 +65,8 @@
 </head>
 
 <body id="painel-body">
+    <!-- IFRAME OCULTO PARA IMPRESSÃO SEGURA -->
+    <iframe id="iframe-impressao" style="display:none;"></iframe>
 
     <header id="main-header-bar">
         <div class="header-logo">
@@ -173,7 +175,7 @@
         </div>
     </main>
 
-    <footer class="system-footer" id="main-footer-bar">
+    <footer class="system-footer" id="main-header-bar">
         <p>© 2026 - Sistema de Controle de Estoque</p>
     </footer>
 
@@ -181,12 +183,47 @@
     <!-- ÁREA DE MODAIS OBRIGATÓRIOS DO SISTEMA (USUÁRIOS/CONFIGS) -->
     <!-- ========================================================= -->
 
+    <!-- MODAL DE SENHA MASTER PARA EDIÇÃO DE PRODUTO -->
+    <div id="modalSenhaMasterEdicao" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100000;">
+        <div class="modal-content" style="background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <h3 style="color: #343a40; margin-top: 0; border-bottom: 2px solid #6c757d; padding-bottom: 10px;">🔑 Palavra-passe Master</h3>
+            <p style="font-size: 14px; color: #495057; margin: 15px 0;">Este produto já está registado.<br>Introduza a palavra-passe master para autorizar a alteração:</p>
+            <input type="password" id="inputSenhaMasterEdicao" placeholder="Palavra-passe..." style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ced4da; margin-bottom: 20px; text-align: center; font-size: 16px; outline: none;" onkeypress="if(event.key === 'Enter') confirmarSenhaMasterEdicao()">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="document.getElementById('modalSenhaMasterEdicao').style.display='none'" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancelar</button>
+                <button onclick="confirmarSenhaMasterEdicao()" style="flex: 1; padding: 12px; background: #343a40; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SELEÇÃO A4 (ETIQUETAS EM MASSA) -->
+    <div id="modalSelecaoA4" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 10000;">
+        <div class="modal-content" style="background: #ffffff; padding: 30px; border-radius: 10px; width: 90%; max-width: 620px; box-sizing: border-box; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: 1px solid #dee2e6;">
+            <h2 style="color: #212529; margin-top: 0; border-bottom: 2px solid #343a40; padding-bottom: 12px; font-size: 20px; font-weight: 700;">📄 Selecionar Produtos para Impressão A4</h2>
+            
+            <div style="margin: 15px 0 10px 0; display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="inputBuscaA4" placeholder="🔍 Pesquisa instantânea por nome ou código..." oninput="filtrarProdutosA4(this.value)" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ced4da; outline: none; font-size: 14px; background: #f8f9fa;">
+                <button onclick="marcarTodosProdutosA4(true)" style="padding: 10px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">Marcar Todos</button>
+                <button onclick="marcarTodosProdutosA4(false)" style="padding: 10px 12px; background: #adb5bd; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">Desmarcar</button>
+            </div>
+
+            <div id="containerListaProdutosA4" style="flex: 1; overflow-y: auto; max-height: 350px; border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; background: #f8f9fa;">
+                <!-- Lista injetada dinamicamente via JavaScript -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="document.getElementById('modalSelecaoA4').style.display='none'" style="flex: 1; padding: 12px; background: #e9ecef; color: #495057; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancelar</button>
+                <button onclick="executarImpressaoA4Selecionados()" style="flex: 2; padding: 12px; background: #212529; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">🖨️ Imprimir Selecionados (A4)</button>
+            </div>
+        </div>
+    </div>
+
     <!-- NOVO MODAL DE ALERTAS CUSTOMIZADOS -->
     <div id="modalAlertaCustom" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100000;">
         <div class="modal-content" style="background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <h2 id="tituloAlertaCustom" style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">Aviso</h2>
+            <h2 id="tituloAlertaCustom" style="margin-top: 0; color: #343a40; border-bottom: 2px solid #6c757d; padding-bottom: 10px;">Aviso</h2>
             <p id="mensagemAlertaCustom" style="font-size: 15px; color: #333; margin: 20px 0; font-weight: bold;"></p>
-            <button onclick="fecharModalPersonalizado('modalAlertaCustom')" style="width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">OK</button>
+            <button onclick="fecharModalPersonalizado('modalAlertaCustom')" style="width: 100%; padding: 12px; background: #495057; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">OK</button>
         </div>
     </div>
 
@@ -446,62 +483,64 @@
 
 
     <!-- ====================================================== -->
-    <!-- MODAL UNIFICADO: REGISTRAR, CONSULTAR E IMPRIMIR ETIQUETA-->
+    <!-- MODAL UNIFICADO: GERENCIAR PRODUTO (CINZA PROFISSIONAL)-->
     <!-- ====================================================== -->
-    <div id="modalRegistrarProdutoSistema" class="modal">
-        <div class="modal-content" style="max-width: 650px; box-sizing: border-box;">
-            <h2 style="color: #28a745; margin-top: 0;">📦 Gerenciar Produto</h2>
+    <div id="modalRegistrarProdutoSistema" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 9999;">
+        <div class="modal-content" style="background: #ffffff; padding: 30px; border-radius: 10px; width: 90%; max-width: 680px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: 1px solid #dee2e6;">
+            <h2 style="color: #212529; margin-top: 0; border-bottom: 2px solid #343a40; padding-bottom: 12px; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">📦 Gerenciar Produto</h2>
             
-            <div class="form-row">
+            <div class="form-row" style="margin-top: 15px;">
                 <div class="form-col" style="flex: 2;">
-                    <label>Código de Barras / Numérico:</label>
-                    <div class="input-group">
-                        <input type="text" id="newBarcodeModal" placeholder="Bipe, digite ou gere..." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold;" onkeypress="if(event.key === 'Enter') buscarProdutoUnified()">
-                        <button onclick="buscarProdutoUnified()" style="padding: 10px 15px; background: #f39c12; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🔍 Buscar</button>
-                        <button onclick="gerarCodigoBarras('newBarcodeModal')" style="padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">🎲 Gerar Auto</button>
+                    <label style="color: #495057; font-weight: 600;">Código ou Nome do Produto:</label>
+                    <div class="input-group" style="position: relative;">
+                        <input type="text" id="newBarcodeModal" placeholder="Bipe, código ou digite o nome..." autocomplete="off" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; font-weight: bold; background: #f8f9fa; color: #212529; outline: none;" oninput="pesquisarProdutosModalGerenciar(this.value)" onkeypress="if(event.key === 'Enter') buscarProdutoUnified()">
+                        <button onclick="buscarProdutoUnified()" style="padding: 11px 16px; background: #495057; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">🔍 Buscar</button>
+                        <button onclick="gerarCodigoBarras('newBarcodeModal')" style="padding: 11px 16px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">🎲 Gerar</button>
+                        
+                        <!-- LEQUE / DROPDOWN DE SUGESTÕES -->
+                        <div id="lista-sugestoes-gerenciar" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 200px; overflow-y: auto; z-index: 999999; display: none; text-align: left;"></div>
                     </div>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-col">
-                    <label>Nome do Produto:</label>
-                    <input type="text" id="newNameModal" placeholder="Ex: Cerveja Lata" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                    <label style="color: #495057; font-weight: 600;">Nome do Produto:</label>
+                    <input type="text" id="newNameModal" placeholder="Ex: Cerveja Lata" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; background: #fff; color: #212529; outline: none;">
                 </div>
                 <div class="form-col" style="flex: 0.5;">
-                    <label>Quantidade:</label>
-                    <input type="number" id="newStockModal" value="1" min="0" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold;">
+                    <label style="color: #495057; font-weight: 600;">Quantidade:</label>
+                    <input type="number" id="newStockModal" value="1" min="0" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; font-weight: bold; background: #fff; color: #212529; outline: none;">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-col">
-                    <label>Custo (R$):</label>
-                    <input type="number" id="newCostModal" step="0.01" oninput="calcularPrecoVenda('new')" placeholder="0.00" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: #fdf2e9;">
+                    <label style="color: #495057; font-weight: 600;">Custo (R$):</label>
+                    <input type="number" id="newCostModal" step="0.01" oninput="calcularPrecoVenda('new')" placeholder="0.00" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; background: #f8f9fa; color: #212529; outline: none;">
                 </div>
                 <div class="form-col">
-                    <label>Margem Lucro (%):</label>
-                    <input type="number" id="newMarginModal" step="0.01" oninput="calcularPrecoVenda('new')" placeholder="0.0" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc; background: #e8f8f5;">
+                    <label style="color: #495057; font-weight: 600;">Margem Lucro (%):</label>
+                    <input type="number" id="newMarginModal" step="0.01" oninput="calcularPrecoVenda('new')" placeholder="0.0" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #ced4da; background: #f8f9fa; color: #212529; outline: none;">
                 </div>
                 <div class="form-col">
-                    <label>Preço Venda (R$):</label>
-                    <input type="number" id="newPriceModal" step="0.01" oninput="calcularMargemLucro('new')" placeholder="0.00" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #27ae60; font-weight: bold; color: #27ae60;">
+                    <label style="color: #495057; font-weight: 600;">Preço Venda (R$):</label>
+                    <input type="number" id="newPriceModal" step="0.01" oninput="calcularMargemLucro('new')" placeholder="0.00" style="width: 100%; padding: 11px; border-radius: 6px; border: 1px solid #343a40; font-weight: bold; color: #212529; background: #fff; outline: none;">
                 </div>
             </div>
 
-            <div id="divSenhaEdicao" style="display: none; margin-top: 15px; padding: 10px; background: #fbeeeeb0; border: 1px solid #f5c6cb; border-radius: 5px;">
-                <label style="color: #721c24; font-weight: bold;">🔑 Palavra-passe Master (Obrigatória para Editar):</label>
-                <input type="password" id="senhaEdicaoModal" placeholder="Digite a palavra-passe para confirmar..." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #f5c6cb; margin-top: 5px;">
-            </div>
-
-            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 25px;">
-                <button onclick="imprimirEtiquetaPreco('newBarcodeModal', 'newNameModal', 'newPriceModal')" style="flex: 1; padding: 10px; background: #9b59b6; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; min-width: 150px;">🖨️ Etiqueta de Preço</button>
-                <button onclick="imprimirEtiquetaCodigo('newBarcodeModal', 'newNameModal')" style="flex: 1; padding: 10px; background: #17a2b8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; min-width: 150px;">🖨️ Cód. de Barras</button>
+            <div style="background: #f1f3f5; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: #495057; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">🖨️ Opções de Impressão de Etiquetas</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button onclick="imprimirEtiquetaPreco('newBarcodeModal', 'newNameModal', 'newPriceModal')" style="flex: 1; padding: 10px; background: #495057; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; min-width: 130px; transition: background 0.2s;">Etiqueta Preço</button>
+                    <button onclick="imprimirEtiquetaCodigo('newBarcodeModal', 'newNameModal')" style="flex: 1; padding: 10px; background: #6c757d; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; min-width: 130px; transition: background 0.2s;">Cód. Barras</button>
+                    <button onclick="imprimirEtiquetasA4Geral()" style="flex: 1; padding: 10px; background: #343a40; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; min-width: 140px; transition: background 0.2s;">Todos (A4)</button>
+                </div>
             </div>
             
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button onclick="document.getElementById('modalRegistrarProdutoSistema').style.display='none'" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Cancelar</button>
-                <button onclick="salvarProdutoPersonalizado()" id="btnSalvarUnified" style="flex: 2; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Salvar Produto</button>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button onclick="document.getElementById('modalRegistrarProdutoSistema').style.display='none'" style="flex: 1; padding: 12px; background: #e9ecef; color: #495057; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Cancelar</button>
+                <button onclick="salvarProdutoPersonalizado()" id="btnSalvarUnified" style="flex: 2; padding: 12px; background: #212529; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Salvar Produto</button>
             </div>
         </div>
     </div>
@@ -524,7 +563,7 @@
             <input type="range" id="transparencia-cards" min="0.5" max="1" step="0.05" value="1" style="width: 100%; margin-top: 10px; cursor: pointer;">
             <p style="font-size: 11px; color: #777; margin-top: 5px;">Ajuste para criar efeito de vidro caso use Imagem de Fundo.</p>
 
-            <button onclick="salvarCoresTema()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; margin-top: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(40,167,69,0.3);">✔️ Aplicar Cores e Opacidade</button>
+            <button onclick="salvarCoresTema()" style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; margin-top: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(40,167,69,0.3);">✔️️ Aplicar Cores e Opacidade</button>
             
             <hr style="margin: 25px 0; border: 0; border-top: 1px solid #ddd;">
             
@@ -542,7 +581,6 @@
 
     <script src="script.js"></script>
     <script>
-        // Função universal para abrir modais padrão vindos do script.js
         function abrirModal(id) { 
             var modal = document.getElementById(id);
             if (modal) modal.style.display = 'flex'; 
@@ -553,18 +591,12 @@
             if (modal) modal.style.display = 'none'; 
         }
 
-        // =====================================
-        // ALERTA CUSTOMIZADO GLOBAL
-        // =====================================
         function mostrarAlerta(mensagem, titulo = "Aviso") {
             document.getElementById("tituloAlertaCustom").innerText = titulo;
             document.getElementById("mensagemAlertaCustom").innerText = mensagem;
             document.getElementById("modalAlertaCustom").style.display = "flex";
         }
 
-        // =====================================
-        // CORREÇÃO: NOME DO USUÁRIO E ACESSO
-        // =====================================
         document.addEventListener("DOMContentLoaded", function() {
             var elUser = document.getElementById("nome-usuario-logado");
             if (elUser) {
@@ -582,9 +614,6 @@
             }, 300);
         });
 
-        // =====================================
-        // CONTROLE DO TEMA (CORES E BACKGROUND)
-        // =====================================
         function abrirModalConfigTema() {
             var tema = window.obterDados ? window.obterDados('configTema') : null;
             if (tema) {
@@ -678,6 +707,53 @@
         }
 
         // =====================================
+        // MOTOR DE PESQUISA EM LEQUE (DROPDOWN) NO MODAL
+        // =====================================
+        function pesquisarProdutosModalGerenciar(termo) {
+            var container = document.getElementById('lista-sugestoes-gerenciar');
+            if (!container) return;
+            termo = termo.trim().toLowerCase();
+            
+            if (!termo || termo.length < 1) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            var produtos = window.obterDados ? window.obterDados("produtos") || {} : {};
+            var encontrados = [];
+            
+            Object.keys(produtos).forEach(codigo => {
+                let p = produtos[codigo];
+                if (codigo.toLowerCase().includes(termo) || (p.nome && p.nome.toLowerCase().includes(termo))) {
+                    encontrados.push({ codigo: codigo, p: p });
+                }
+            });
+
+            if (encontrados.length === 0) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = '';
+            encontrados.forEach(item => {
+                let div = document.createElement('div');
+                div.style.cssText = "padding: 8px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px;";
+                div.innerHTML = `<div style="display:flex; flex-direction:column; text-align:left;"><strong style="color:#212529;">${item.p.nome}</strong><span style="color:#6c757d; font-size:11px;">Cód: ${item.codigo} | Estoque: ${item.p.quantidade || 0}</span></div><strong style="color:#212529;">R$ ${(parseFloat(item.p.valor) || 0).toFixed(2)}</strong>`;
+                div.onmouseover = function() { this.style.background = '#f8f9fa'; };
+                div.onmouseout = function() { this.style.background = '#fff'; };
+                div.onclick = function() {
+                    document.getElementById("newBarcodeModal").value = item.codigo;
+                    container.style.display = 'none';
+                    buscarProdutoUnified();
+                };
+                container.appendChild(div);
+            });
+            container.style.display = 'block';
+        }
+
+        // =====================================
         // MOTOR UNIFICADO: CONSULTAR, REGISTRAR E ATUALIZAR
         // =====================================
         function abrirModalGerenciarProduto() {
@@ -688,16 +764,19 @@
             document.getElementById('newCostModal').value = '';
             document.getElementById('newMarginModal').value = '';
             document.getElementById('newPriceModal').value = '';
-            document.getElementById('senhaEdicaoModal').value = ''; 
             
-            document.getElementById('divSenhaEdicao').style.display = 'none';
+            var containerSugestoes = document.getElementById('lista-sugestoes-gerenciar');
+            if (containerSugestoes) containerSugestoes.style.display = 'none';
             
             document.getElementById('btnSalvarUnified').innerText = 'Salvar Produto';
-            document.getElementById('btnSalvarUnified').style.background = '#28a745';
+            document.getElementById('btnSalvarUnified').style.background = '#212529';
             setTimeout(() => document.getElementById('newBarcodeModal').focus(), 100);
         }
 
         function buscarProdutoUnified() {
+            var containerSugestoes = document.getElementById('lista-sugestoes-gerenciar');
+            if (containerSugestoes) containerSugestoes.style.display = 'none';
+
             var codigo = document.getElementById("newBarcodeModal").value.trim();
             if (!codigo) {
                 mostrarAlerta("⚠️ Digite ou bipe um código de barras para procurar.", "Atenção");
@@ -714,14 +793,10 @@
                 document.getElementById("newMarginModal").value = p.margem || '';
                 document.getElementById("newPriceModal").value = p.valor || '';
                 
-                document.getElementById('divSenhaEdicao').style.display = 'block';
-                document.getElementById('senhaEdicaoModal').value = '';
-                
                 document.getElementById('btnSalvarUnified').innerText = 'Atualizar Estoque/Dados';
-                document.getElementById('btnSalvarUnified').style.background = '#f39c12';
+                document.getElementById('btnSalvarUnified').style.background = '#343a40';
                 
-                mostrarAlerta(`✅ Produto encontrado!\nQuantidade em stock: ${p.quantidade || 0} un.\n\nPara alterar os dados, introduza a Palavra-passe Master.`, "Produto Localizado");
-                setTimeout(() => document.getElementById('senhaEdicaoModal').focus(), 100);
+                mostrarAlerta(`✅ Produto encontrado!\nQuantidade em stock: ${p.quantidade || 0} un.\n\nClique em 'Atualizar Estoque/Dados' para gravar.`, "Produto Localizado");
             } else {
                 document.getElementById("newNameModal").value = '';
                 document.getElementById("newStockModal").value = '1';
@@ -729,11 +804,8 @@
                 document.getElementById("newMarginModal").value = '';
                 document.getElementById("newPriceModal").value = '';
                 
-                document.getElementById('divSenhaEdicao').style.display = 'none';
-                document.getElementById('senhaEdicaoModal').value = '';
-                
                 document.getElementById('btnSalvarUnified').innerText = 'Salvar Novo Produto';
-                document.getElementById('btnSalvarUnified').style.background = '#28a745';
+                document.getElementById('btnSalvarUnified').style.background = '#212529';
                 
                 mostrarAlerta("ℹ️ Produto não cadastrado no sistema.\nPreencha as informações para o registar.", "Novo Produto");
                 document.getElementById("newNameModal").focus();
@@ -759,15 +831,43 @@
             var isUpdate = !!produtos[codigo]; 
 
             if (isUpdate) {
-                var senhaDigitada = document.getElementById("senhaEdicaoModal").value;
-                var senhasSys = window.obterDados ? window.obterDados("senhasSistema") : null;
-                var senhaCorreta = senhasSys ? senhasSys.master : "1996"; 
-
-                if (senhaDigitada !== senhaCorreta) {
-                    mostrarAlerta("⚠️ Palavra-passe Master Incorreta!\n\nA edição não é permitida.", "Acesso Negado");
-                    return;
-                }
+                document.getElementById('modalSenhaMasterEdicao').style.display = 'flex';
+                document.getElementById('inputSenhaMasterEdicao').value = '';
+                setTimeout(() => document.getElementById('inputSenhaMasterEdicao').focus(), 100);
+                return; 
             }
+
+            executarGravacaoProduto(codigo, nome, qtd, custo, margem, venda);
+        }
+
+        function confirmarSenhaMasterEdicao() {
+            var senhaDigitada = document.getElementById("inputSenhaMasterEdicao").value;
+            var senhasSys = window.obterDados ? window.obterDados("senhasSistema") : null;
+            var senhaCorreta = senhasSys ? senhasSys.master : "1996"; 
+
+            if (senhaDigitada !== senhaCorreta) {
+                mostrarAlerta("⚠️ Palavra-passe Master Incorreta!\n\nA edição não é permitida.", "Acesso Negado");
+                document.getElementById("inputSenhaMasterEdicao").value = "";
+                return;
+            }
+
+            document.getElementById('modalSenhaMasterEdicao').style.display = 'none';
+
+            var codigo = document.getElementById("newBarcodeModal").value.trim();
+            var nome = document.getElementById("newNameModal").value.trim();
+            var qtd = parseInt(document.getElementById("newStockModal").value) || 0;
+            var custo = parseFloat(document.getElementById("newCostModal").value) || 0;
+            var margem = parseFloat(document.getElementById("newMarginModal").value) || 0;
+            var venda = parseFloat(document.getElementById("newPriceModal").value) || 0;
+
+            executarGravacaoProduto(codigo, nome, qtd, custo, margem, venda);
+        }
+
+        function executarGravacaoProduto(codigo, nome, qtd, custo, margem, venda) {
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            if (!produtos) produtos = {};
+
+            var isUpdate = !!produtos[codigo];
 
             produtos[codigo] = {
                 nome: nome,
@@ -816,7 +916,7 @@
         }
 
         // =====================================
-        // MOTOR 1: IMPRESSÃO ETIQUETA PREÇO GÔNDOLA (100x30mm Branca)
+        // MOTOR 1: IMPRESSÃO ETIQUETA PREÇO GÔNDOLA (100x30mm) VIA IFRAME
         // =====================================
         window.imprimirEtiquetaPreco = function(idCodigo, idNome, idPreco) {
             var codigo = document.getElementById(idCodigo).value.trim();
@@ -828,8 +928,16 @@
                 return;
             }
 
-            var win = window.open('', 'Imprimir Etiqueta Preco', 'width=500,height=300');
-            win.document.write(`
+            var iframe = document.getElementById("iframe-impressao");
+            if (!iframe) {
+                iframe = document.createElement("iframe");
+                iframe.id = "iframe-impressao";
+                iframe.style.display = "none";
+                document.body.appendChild(iframe);
+            }
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            let htmlStr = `
                 <html><head>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
                 <style>
@@ -841,12 +949,9 @@
                     }
                     .left-col { width: 65%; display: flex; flex-direction: column; justify-content: space-between; }
                     .right-col { width: 35%; display: flex; align-items: center; justify-content: flex-end; }
-                    
                     .nome { font-size: 10pt; font-weight: bold; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                    
                     .barcode-container { margin-top: auto; display: flex; flex-direction: column; }
                     svg { max-height: 12mm; width: 100%; object-fit: contain; margin-left: -5px; }
-                    
                     .preco-simbolo { font-size: 14pt; font-weight: bold; margin-right: 2px; }
                     .preco-valor { font-size: 28pt; font-weight: bold; letter-spacing: -1px; }
                 </style>
@@ -862,24 +967,26 @@
                         <span class="preco-valor">${preco.toFixed(2).replace('.', ',')}</span>
                     </div>
                 <script>
-                    JsBarcode("#barcode", "${codigo}", {
-                        format: "CODE128",
-                        width: 2,
-                        height: 40,
-                        displayValue: true,
-                        fontSize: 12,
-                        margin: 0,
-                        textMargin: 2
-                    });
-                    setTimeout(() => { window.print(); window.close(); }, 500);
+                    window.onload = function() {
+                        JsBarcode("#barcode", "${codigo}", {
+                            format: "CODE128",
+                            width: 2,
+                            height: 40,
+                            displayValue: true,
+                            fontSize: 12,
+                            margin: 0,
+                            textMargin: 2
+                        });
+                        setTimeout(() => { window.print(); }, 300);
+                    };
                 <\/script>
                 </body></html>
-            `);
-            win.document.close();
+            `;
+            doc.open(); doc.write(htmlStr); doc.close();
         }
 
         // =====================================
-        // MOTOR 2: IMPRESSÃO APENAS CÓDIGO DE BARRAS (Simples)
+        // MOTOR 2: IMPRESSÃO APENAS CÓDIGO DE BARRAS VIA IFRAME
         // =====================================
         window.imprimirEtiquetaCodigo = function(idCodigo, idNome) {
             var codigo = document.getElementById(idCodigo).value.trim();
@@ -890,8 +997,16 @@
                 return;
             }
 
-            var win = window.open('', 'Imprimir Codigo Barras', 'width=400,height=300');
-            win.document.write(`
+            var iframe = document.getElementById("iframe-impressao");
+            if (!iframe) {
+                iframe = document.createElement("iframe");
+                iframe.id = "iframe-impressao";
+                iframe.style.display = "none";
+                document.body.appendChild(iframe);
+            }
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            let htmlStr = `
                 <html><head>
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
                 <style>
@@ -904,19 +1019,164 @@
                     <div class="nome">${nome || 'PRODUTO'}</div>
                     <svg id="barcode"></svg>
                 <script>
-                    JsBarcode("#barcode", "${codigo}", {
-                        format: "CODE128",
-                        width: 2,
-                        height: 50,
-                        displayValue: true,
-                        fontSize: 12,
-                        margin: 0
-                    });
-                    setTimeout(() => { window.print(); window.close(); }, 500);
+                    window.onload = function() {
+                        JsBarcode("#barcode", "${codigo}", {
+                            format: "CODE128",
+                            width: 2,
+                            height: 50,
+                            displayValue: true,
+                            fontSize: 12,
+                            margin: 0
+                        });
+                        setTimeout(() => { window.print(); }, 300);
+                    };
                 <\/script>
                 </body></html>
-            `);
-            win.document.close();
+            `;
+            doc.open(); doc.write(htmlStr); doc.close();
+        }
+
+        // =====================================
+        // MOTOR 3: ABERTURA DO MODAL DE SELEÇÃO A4 (COM PESQUISA INSTANTÂNEA E TODOS DESMARCADOS)
+        // =====================================
+        window.imprimirEtiquetasA4Geral = function() {
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            var codigos = Object.keys(produtos);
+
+            if (codigos.length === 0) {
+                mostrarAlerta("⚠️ Não existem produtos cadastrados no sistema.", "Atenção");
+                return;
+            }
+
+            window.renderizarListaSelecaoA4(produtos);
+            document.getElementById('modalSelecaoA4').style.display = 'flex';
+            document.getElementById('inputBuscaA4').value = '';
+            setTimeout(() => document.getElementById('inputBuscaA4').focus(), 100);
+        }
+
+        window.renderizarListaSelecaoA4 = function(produtos, filtro = "") {
+            var container = document.getElementById('containerListaProdutosA4');
+            container.innerHTML = "";
+            let termo = filtro.trim().toLowerCase();
+
+            Object.keys(produtos).forEach(cod => {
+                let p = produtos[cod];
+                let nome = p.nome || "PRODUTO";
+                let preco = parseFloat(p.valor || 0).toFixed(2);
+
+                if (termo && !cod.toLowerCase().includes(termo) && !nome.toLowerCase().includes(termo)) {
+                    return;
+                }
+
+                let div = document.createElement('div');
+                div.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #fff; border-bottom: 1px solid #e9ecef; border-radius: 4px; margin-bottom: 5px;";
+                div.innerHTML = `
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; font-size: 14px; color: #212529;">
+                        <input type="checkbox" class="chk-produto-a4" value="${cod}" style="width: 16px; height: 16px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <strong>${nome}</strong> <span style="color: #6c757d; font-size: 12px;">(Cód: ${cod})</span>
+                        </div>
+                        <span style="font-weight: bold; color: #212529;">R$ ${preco}</span>
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.filtrarProdutosA4 = function(termo) {
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            window.renderizarListaSelecaoA4(produtos, termo);
+        }
+
+        window.marcarTodosProdutosA4 = function(marcar) {
+            var checkboxes = document.querySelectorAll('.chk-produto-a4');
+            checkboxes.forEach(chk => chk.checked = marcar);
+        }
+
+        window.executarImpressaoA4Selecionados = function() {
+            var checkboxes = document.querySelectorAll('.chk-produto-a4:checked');
+            if (checkboxes.length === 0) {
+                mostrarAlerta("⚠️ Selecione pelo menos um produto na lista para imprimir.", "Atenção");
+                return;
+            }
+
+            var produtos = window.obterDados ? window.obterDados("produtos") : {};
+            var codigosSelecionados = [];
+            checkboxes.forEach(chk => codigosSelecionados.push(chk.value));
+
+            document.getElementById('modalSelecaoA4').style.display = 'none';
+
+            var iframe = document.getElementById("iframe-impressao");
+            if (!iframe) {
+                iframe = document.createElement("iframe");
+                iframe.id = "iframe-impressao";
+                iframe.style.display = "none";
+                document.body.appendChild(iframe);
+            }
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            let itensHtml = "";
+            codigosSelecionados.forEach((cod, index) => {
+                let p = produtos[cod];
+                if (!p) return;
+                let nomeProd = (p.nome || "PRODUTO").substring(0, 22);
+                let precoProd = parseFloat(p.valor || 0).toFixed(2).replace('.', ',');
+                
+                itensHtml += `
+                    <div class="etiqueta-a4">
+                        <div class="nome-prod">${nomeProd}</div>
+                        <svg id="bar-${index}"></svg>
+                        <div class="preco-prod">R$ ${precoProd}</div>
+                    </div>
+                `;
+            });
+
+            let scriptBarcodes = "";
+            codigosSelecionados.forEach((cod, index) => {
+                scriptBarcodes += `
+                    try {
+                        JsBarcode("#bar-${index}", "${cod}", {
+                            format: "CODE128",
+                            width: 1.5,
+                            height: 30,
+                            displayValue: true,
+                            fontSize: 10,
+                            margin: 0
+                        });
+                    } catch(e) {}
+                `;
+            });
+
+            let htmlStr = `
+                <html><head>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"><\/script>
+                <style>
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+                    .grid-a4 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; }
+                    .etiqueta-a4 { 
+                        border: 1px dashed #bbb; padding: 4mm; border-radius: 4px; 
+                        display: flex; flex-direction: column; align-items: center; justify-content: space-between; 
+                        height: 25mm; box-sizing: border-box; text-align: center; background: #fff; page-break-inside: avoid; 
+                    }
+                    .nome-prod { font-size: 9pt; font-weight: bold; text-transform: uppercase; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    svg { max-height: 12mm; width: 100%; object-fit: contain; }
+                    .preco-prod { font-size: 11pt; font-weight: bold; color: #000; }
+                </style>
+                </head><body>
+                    <div class="grid-a4">
+                        ${itensHtml}
+                    </div>
+                <script>
+                    window.onload = function() {
+                        ${scriptBarcodes}
+                        setTimeout(() => { window.print(); }, 400);
+                    };
+                <\/script>
+                </body></html>
+            `;
+
+            doc.open(); doc.write(htmlStr); doc.close();
         }
 
         // Fecha o menu de utilizador ao clicar fora
@@ -924,6 +1184,8 @@
             var menu = document.getElementById('userMenu');
             if (menu && !menu.contains(event.target)) {
                 menu.classList.remove('aberto');
+                var sugestoes = document.getElementById('lista-sugestoes-gerenciar');
+                if (sugestoes) sugestoes.style.display = 'none';
             }
         });
     </script>
