@@ -186,8 +186,8 @@
     <!-- MODAL DE SENHA MASTER PARA EDIÇÃO DE PRODUTO -->
     <div id="modalSenhaMasterEdicao" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100000;">
         <div class="modal-content" style="background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-            <h3 style="color: #343a40; margin-top: 0; border-bottom: 2px solid #6c757d; padding-bottom: 10px;">🔑 Palavra-passe Master</h3>
-            <p style="font-size: 14px; color: #495057; margin: 15px 0;">Este produto já está registado.<br>Introduza a palavra-passe master para autorizar a alteração:</p>
+            <h3 style="color: #343a40; margin-top: 0; border-bottom: 2px solid #6c757d; padding-bottom: 10px;">🔑 Senha Master</h3>
+            <p style="font-size: 14px; color: #495057; margin: 15px 0;">Este produto já está registado.<br> Inserir senha master para autorizar a alteração:</p>
             <input type="password" id="inputSenhaMasterEdicao" placeholder="Palavra-passe..." style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ced4da; margin-bottom: 20px; text-align: center; font-size: 16px; outline: none;" onkeypress="if(event.key === 'Enter') confirmarSenhaMasterEdicao()">
             <div style="display: flex; gap: 10px;">
                 <button onclick="document.getElementById('modalSenhaMasterEdicao').style.display='none'" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancelar</button>
@@ -851,7 +851,7 @@
             var senhaCorreta = senhasSys ? senhasSys.master : "1996"; 
 
             if (senhaDigitada !== senhaCorreta) {
-                mostrarAlerta("⚠️ Palavra-passe Master Incorreta!\n\nA edição não é permitida.", "Acesso Negado");
+                mostrarAlerta("⚠️ Senha Master Incorreta!\n\nA edição não é permitida.", "Acesso Negado");
                 document.getElementById("inputSenhaMasterEdicao").value = "";
                 return;
             }
