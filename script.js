@@ -576,7 +576,7 @@ function aplicarPermissoesPainel() {
         }
         
         // Menus Suspensos baseados no SaaS Master
-        if(document.getElementById('zona-apagar-tudo')) document.getElementById('zona-apagar-tudo').style.display = isAtivoSaaS('mod_apagar_tudo') ? 'block' : 'none';
+        if(document.getElementById('zona-apagar-tudo')) document.getElementById('zona-apagar-tudo').style.display = (modSaaS['mod_apagar_tudo'] === true) ? 'block' : 'none';
         if(document.getElementById('btn-menu-config-emp')) document.getElementById('btn-menu-config-emp').style.display = isAtivoSaaS('mod_admin_config') ? 'block' : 'none';
         if(document.getElementById('btn-menu-criar-usu')) document.getElementById('btn-menu-criar-usu').style.display = isAtivoSaaS('mod_admin_usuarios') ? 'block' : 'none';
         if(document.getElementById('btn-menu-editar-usu')) document.getElementById('btn-menu-editar-usu').style.display = isAtivoSaaS('mod_admin_usuarios') ? 'block' : 'none';
@@ -584,10 +584,10 @@ function aplicarPermissoesPainel() {
         if(document.getElementById('btn-menu-ver-usu')) document.getElementById('btn-menu-ver-usu').style.display = isAtivoSaaS('mod_admin_usuarios') ? 'block' : 'none';
         if(document.getElementById('btn-menu-conectar-firebase')) document.getElementById('btn-menu-conectar-firebase').style.display = isAtivoSaaS('mod_admin_firebase') ? 'block' : 'none';
         
-        let temMenuUsu = isAtivoSaaS('mod_admin_usuarios') || isAtivoSaaS('mod_admin_config');
+        let temMenuUsu = isAtivoSaaS('mod_admin_usuarios') || isAtivoSaaS('mod_admin_config') || isAtivoSaaS('mod_admin_firebase');
         if(document.getElementById('separador-menu-usu')) document.getElementById('separador-menu-usu').style.display = temMenuUsu ? 'block' : 'none';
         
-        // Cartões do Dashboard
+        // Cartões do Dashboard Principal
         if(document.getElementById('card-caixa')) document.getElementById('card-caixa').style.display = isAtivoSaaS('mod_caixa') ? 'block' : 'none';
         if(document.getElementById('card-cupons')) document.getElementById('card-cupons').style.display = isAtivoSaaS('mod_cupons') ? 'block' : 'none';
         if(document.getElementById('card-cozinha')) document.getElementById('card-cozinha').style.display = (configEmp.usarMonitorCozinha && isAtivoSaaS('mod_cozinha')) ? 'block' : 'none';
@@ -622,7 +622,7 @@ function aplicarPermissoesPainel() {
     if(document.getElementById('card-relatorio')) document.getElementById('card-relatorio').style.display = (p.relatorio && isAtivoSaaS('mod_relatorios')) ? 'block' : 'none';
 
     if(document.getElementById('btn-menu-conectar-firebase')) document.getElementById('btn-menu-conectar-firebase').style.display = (p.conectar_firebase && isAtivoSaaS('mod_admin_firebase')) ? 'block' : 'none';
-    if(document.getElementById('zona-apagar-tudo')) document.getElementById('zona-apagar-tudo').style.display = (p.apagar_tudo && isAtivoSaaS('mod_apagar_tudo')) ? 'block' : 'none';
+    if(document.getElementById('zona-apagar-tudo')) document.getElementById('zona-apagar-tudo').style.display = (p.apagar_tudo && modSaaS['mod_apagar_tudo'] === true) ? 'block' : 'none';
     if(document.getElementById('btn-menu-config-emp')) document.getElementById('btn-menu-config-emp').style.display = (p.config_empresa && isAtivoSaaS('mod_admin_config')) ? 'block' : 'none';
     if(document.getElementById('btn-menu-criar-usu')) document.getElementById('btn-menu-criar-usu').style.display = (p.criar_usuario && isAtivoSaaS('mod_admin_usuarios')) ? 'block' : 'none';
     if(document.getElementById('btn-menu-editar-usu')) document.getElementById('btn-menu-editar-usu').style.display = (p.editar_usuario && isAtivoSaaS('mod_admin_usuarios')) ? 'block' : 'none';
@@ -634,6 +634,7 @@ function aplicarPermissoesPainel() {
     } else {
         if(document.getElementById('separador-menu-usu')) document.getElementById('separador-menu-usu').style.display = 'block';
     }
+
 }
 // -------------------------------------------------------------
 
