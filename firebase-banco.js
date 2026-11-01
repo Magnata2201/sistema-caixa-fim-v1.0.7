@@ -68,15 +68,12 @@ if (configSalva) {
         
         window.isBancoPronto = true;
         document.dispatchEvent(new Event('bancoPronto'));
-        console.log("Firebase conectado com sucesso!");
         
         escutarNuvem();
         iniciarMonitoramentoSaaS();
 
         if (!localStorage.getItem("sincronizacao_inicial_feita")) {
-            console.log("Iniciando sincronização forçada dos dados antigos...");
             const chavesLocais = Object.keys(localStorage);
-            
             for (let chave of chavesLocais) {
                 if (chave !== "sincronizacao_inicial_feita" && chave !== "saas_locked") {
                     let valor = localStorage.getItem(chave);
@@ -143,58 +140,25 @@ function escutarNuvem() {
 // ==========================================
 // 5. CONTROLE SaaS MASTER (Bloqueios, Avisos, Módulos e Fundo)
 // ==========================================
+let verificadorAgendamento = null;
+let dadosLicenca = null;
+
 export function iniciarMonitoramentoSaaS() {
     if (!db) return; 
 
     const licencaRef = doc(db, "config", "licenca");
     
     onSnapshot(licencaRef, (docSnap) => {
-        const tela = document.getElementById("tela-bloqueio-saas");
-        const texto = document.getElementById("texto-motivo-bloqueio");
-        const qrCode = document.getElementById("qr-pix-bloqueio");
-        const faixaAviso = document.getElementById("faixa-aviso-saas");
-        const ehPaginaLogin = !!document.getElementById("form-login");
-        
         if (docSnap.exists()) {
-            const dados = docSnap.data();
+            dadosLicenca = docSnap.data();
             
-            // SINCRONIZAÇÃO DAS PERMISSÕES DE MÓDULOS PARA O ROTEADOR LOCAL
-            localStorage.setItem('saas_modulos', JSON.stringify(dados.modulosLiberados || {}));
-            
-            if (dados.bloqueado) {
-                localStorage.setItem('saas_locked', 'true');
-            } else {
-                localStorage.removeItem('saas_locked');
-            }
+            // SINCRONIZAÇÃO DAS PERMISSÕES DE MÓDULOS
+            localStorage.setItem('saas_modulos', JSON.stringify(dadosLicenca.modulosLiberados || {}));
+            document.dispatchEvent(new Event('dadosAtualizados'));
 
-            if (ehPaginaLogin) return;
-
-            if (dados.bloqueado) {
-                if(texto) texto.innerText = dados.mensagem || "O sistema foi bloqueado pelo administrador.";
-                if(dados.qrCode && qrCode) { qrCode.src = dados.qrCode; qrCode.style.display = "block"; } else if (qrCode) { qrCode.style.display = "none"; }
-                if(tela) tela.style.display = "flex";
-            } else {
-                if(tela) tela.style.display = "none";
-            }
-
-            let textoAviso = "";
-            if (dados.avisoGlobal && String(dados.avisoGlobal).trim() !== "") {
-                textoAviso = dados.avisoGlobal;
-            } else if (dados.aviso && String(dados.aviso).trim() !== "") {
-                textoAviso = dados.aviso;
-            }
-
-            if (textoAviso !== "") {
-                if(faixaAviso) {
-                    faixaAviso.innerHTML = `⚠️ ${textoAviso}`;
-                    faixaAviso.style.display = "block";
-                }
-            } else {
-                if(faixaAviso) faixaAviso.style.display = "none";
-            }
-
-            if (dados.imagemFundo && dados.imagemFundo.trim() !== "") {
-                document.body.style.setProperty('background-image', `url(${dados.imagemFundo})`, 'important');
+            // BACKGROUND
+            if (dadosLicenca.imagemFundo && dadosLicenca.imagemFundo.trim() !== "") {
+                document.body.style.setProperty('background-image', `url(${dadosLicenca.imagemFundo})`, 'important');
                 document.body.style.setProperty('background-size', 'cover', 'important');
                 document.body.style.setProperty('background-position', 'center', 'important');
                 document.body.style.setProperty('background-attachment', 'fixed', 'important');
@@ -204,14 +168,15 @@ export function iniciarMonitoramentoSaaS() {
                 }
             }
 
-            const mods = dados.modulosLiberados || {};
+            // MÓDULOS VISUAIS
+            const mods = dadosLicenca.modulosLiberados || {};
             const controleVisual = {
                 "mod_caixa": ["card-caixa"],
                 "mod_cupons": ["card-cupons"],
                 "mod_cozinha": ["card-cozinha"],
                 "mod_fidelidade": ["card-fidelidade"],
                 "mod_fiado": ["card-fiado"],
-                "mod_registrar_produto": ["card-registrar_produto"],
+                "mod_gerenciar_produto": ["card-gerenciar_produto"],
                 "mod_todos_produtos": ["card-todos_produtos"],
                 "mod_verificar_quantidade": ["card-verificar_quantidade"],
                 "mod_fim_estoque": ["card-fim_estoque"],
@@ -227,24 +192,107 @@ export function iniciarMonitoramentoSaaS() {
 
             for (const [modKey, seletores] of Object.entries(controleVisual)) {
                 let liberado = (modKey === "mod_apagar_tudo") ? (mods[modKey] === true) : (mods[modKey] !== false);
-                
                 seletores.forEach(seletor => {
                     let elemento = document.getElementById(seletor);
-                    if (!elemento && seletor.includes('[')) {
-                        elemento = document.querySelector(seletor);
-                    }
-                    
+                    if (!elemento && seletor.includes('[')) elemento = document.querySelector(seletor);
                     if (elemento) {
                         if (!liberado) elemento.style.setProperty('display', 'none', 'important');
                         else if (elemento.style.getPropertyPriority('display') === 'important') elemento.style.removeProperty('display');
                     }
                 });
             }
+            
+            // Avalia os bloqueios e as mensagens IMEDIATAMENTE ao receber do Firebase
+            avaliarAgendamentos();
+
+            // Ativa o Cronómetro: Checa o relógio do computador a cada 15 segundos
+            if (!verificadorAgendamento) {
+                verificadorAgendamento = setInterval(avaliarAgendamentos, 15000); 
+            }
+            
         } else {
+            dadosLicenca = null;
             localStorage.removeItem('saas_locked');
             localStorage.removeItem('saas_modulos');
+            const tela = document.getElementById("tela-bloqueio-saas");
+            const faixaAviso = document.getElementById("faixa-aviso-saas");
             if(tela) tela.style.display = "none";
             if(faixaAviso) faixaAviso.style.display = "none";
         }
     });
+}
+
+function avaliarAgendamentos() {
+    if (!dadosLicenca) return;
+    
+    const tela = document.getElementById("tela-bloqueio-saas");
+    const texto = document.getElementById("texto-motivo-bloqueio");
+    const qrCode = document.getElementById("qr-pix-bloqueio");
+    const faixaAviso = document.getElementById("faixa-aviso-saas");
+    const ehPaginaLogin = !!document.getElementById("form-login");
+    
+    // Pega a hora EXATA do computador do cliente agora
+    const agora = new Date();
+    
+    // ==========================================
+    // 1. AVALIAÇÃO DO BLOQUEIO (IMEDIATO OU AGENDADO)
+    // ==========================================
+    let bloqueioAtivo = dadosLicenca.bloqueado === true;
+    
+    if (!bloqueioAtivo && dadosLicenca.dataBloqueioProgramado) {
+        const dataBloqueio = new Date(dadosLicenca.dataBloqueioProgramado);
+        if (agora >= dataBloqueio) {
+            bloqueioAtivo = true; // A hora chegou, bloqueia o sistema
+        }
+    }
+
+    if (bloqueioAtivo) {
+        localStorage.setItem('saas_locked', 'true');
+    } else {
+        localStorage.removeItem('saas_locked');
+    }
+
+    if (!ehPaginaLogin) {
+        if (bloqueioAtivo) {
+            if(texto) texto.innerText = dadosLicenca.mensagem || "O sistema foi bloqueado pelo administrador.";
+            if(dadosLicenca.qrCode && qrCode) { qrCode.src = dadosLicenca.qrCode; qrCode.style.display = "block"; } else if (qrCode) { qrCode.style.display = "none"; }
+            if(tela) tela.style.display = "flex";
+        } else {
+            if(tela) tela.style.display = "none";
+        }
+    }
+
+    // ==========================================
+    // 2. AVALIAÇÃO DA MENSAGEM / AVISOS
+    // ==========================================
+    let textoAvisoExibir = "";
+
+    // Primeiro verifica o aviso Exclusivo (que você digita diretamente no cliente, este é sempre imediato)
+    if (dadosLicenca.aviso && String(dadosLicenca.aviso).trim() !== "") {
+        textoAvisoExibir = dadosLicenca.aviso;
+    }
+
+    // Depois verifica a Mensagem GLOBAL (Que pode ser agendada ou imediata)
+    if (dadosLicenca.avisoGlobal && String(dadosLicenca.avisoGlobal).trim() !== "") {
+        if (dadosLicenca.dataAvisoProgramado) {
+            // Se tem data programada, compara com o relógio
+            const dataAviso = new Date(dadosLicenca.dataAvisoProgramado);
+            if (agora >= dataAviso) {
+                textoAvisoExibir = dadosLicenca.avisoGlobal; // Se a hora já chegou, sobrepõe a mensagem para exibir
+            }
+        } else {
+            // Não tem data programada, mostra na hora
+            textoAvisoExibir = dadosLicenca.avisoGlobal; 
+        }
+    }
+
+    // Exibe ou oculta a faixa amarela de aviso no topo da tela do cliente
+    if (textoAvisoExibir !== "") {
+        if(faixaAviso) {
+            faixaAviso.innerHTML = `⚠️ ${textoAvisoExibir}`;
+            faixaAviso.style.display = "block";
+        }
+    } else {
+        if(faixaAviso) faixaAviso.style.display = "none";
+    }
 }
