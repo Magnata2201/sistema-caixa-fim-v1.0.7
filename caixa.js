@@ -443,9 +443,12 @@ function atualizarTabela() {
   atualizarResumoVenda(); 
 }
 
-window.abrirOpcoesPagamento = function() {
+window.abrirOpcoesPagamento = function(semImpressao = false) {
   if (!window.isCaixaAberto()) return window.mostrarAvisoModal("Caixa Fechado!");
   if (vendaAtual.length === 0) return window.mostrarAvisoModal("Nenhum item adicionado.");
+  
+  window.pularImpressao = semImpressao; // Salva a escolha para o final da venda
+  
   document.getElementById("modal-pagamento").style.display = "flex";
 };
 window.fecharModalPagamento = function() { fecharModal("modal-pagamento"); document.getElementById("codigo-barra").focus(); };
@@ -702,7 +705,7 @@ window.confirmarPagamentoMisto = function() {
     if (fiadoMisto > 0 && clienteFiadoAtual) {
         let limite = parseFloat(clienteFiadoAtual.dados.limiteCredito) || 0;
         let dividaAtual = parseFloat(clienteFiadoAtual.dados.saldoDevedor) || 0;
-        if (limite > 0 && (dividaAtual + fiadoMisto) > limite) return window.mostrarAvisoModal(`⚠️️ Crédito insuficiente para esta parte em Fiado!\nDisponível: R$ ${Math.max(0, limite - dividaAtual).toFixed(2)}`);
+        if (limite > 0 && (dividaAtual + fiadoMisto) > limite) return window.mostrarAvisoModal(`⚠ Crédito insuficiente para esta parte em Fiado!\nDisponível: R$ ${Math.max(0, limite - dividaAtual).toFixed(2)}`);
     }
 
     let pagamentosDetalhados = { "Pix": pix, "Crédito": credito, "Débito": debito, "Dinheiro": dinheiro, "Cheque": cheque, "VR": vr, "Fiado": fiadoMisto };
@@ -968,7 +971,20 @@ window.concluirVendaComDados = function(formaPagamento, valorRecebido, pagamento
   window.salvarDados("resumoFormas", resumoFormas);
   window.salvarDados("movimentacoes", movimentacoes);
   
-  window.imprimirCupom(vendaAtual, totalVenda, formaPagamento, valorRecebido, pagamentosDetalhados, idCupom, numPedido, nomeCliente, obsVenda);
+  // BLOCO ATUALIZADO: VERIFICA SE DEVE PULAR IMPRESSÃO
+  if (window.pularImpressao === true) {
+      if (window.salvarDados) {
+          window.salvarDados("ultimaVenda", {
+              itens: vendaAtual, total: totalVenda, formaPagamento: formaPagamento, 
+              valorRecebido: valorRecebido, pagamentosDetalhados: pagamentosDetalhados, 
+              idCupom: idCupom, numeroPedido: numPedido, nomeCliente: nomeCliente, obsVenda: obsVenda
+          });
+      }
+      window.pularImpressao = false; 
+  } else {
+      window.imprimirCupom(vendaAtual, totalVenda, formaPagamento, valorRecebido, pagamentosDetalhados, idCupom, numPedido, nomeCliente, obsVenda);
+  }
+  
   window.salvarDados("numeroPedidoAtual", numPedido + 1);
 
   vendaAtual = [];
@@ -1329,10 +1345,14 @@ window.handleInputCaixaSearch = function(termo) {
       let div = document.createElement('div');
       div.className = 'suggestion-item-caixa';
       div.innerHTML = `<div style="display:flex; flex-direction:column; text-align:left;"><strong style="color:#0f172a; font-size:14px;">${item.p.nome}</strong><span style="color:#64748b; font-size:11px;">Cód: ${item.codigo} | Estoque: ${item.p.quantidade || 0} un</span></div><strong style="color:#059669; font-size:14px;">R$ ${(parseFloat(item.p.valor) || 0).toFixed(2)}</strong>`;
+      
+      // BLOCO ATUALIZADO: APENAS PREENCHE O CAMPO E ESPERA O ENTER
       div.onclick = function() { 
-          document.getElementById("codigo-barra").value = item.codigo; container.style.display = 'none';
-          setTimeout(() => { if(typeof window.adicionarItemVenda === "function") window.adicionarItemVenda(); }, 50);
+          document.getElementById("codigo-barra").value = item.codigo; 
+          container.style.display = 'none';
+          document.getElementById("codigo-barra").focus(); 
       };
+      
       container.appendChild(div);
   });
   container.style.display = 'block';
@@ -1439,9 +1459,78 @@ window.confirmarSangria = function() {
     
     window.salvarDados("movimentacoes", movimentacoes);
     
-    // Dispara a impressão do comprovante corretamente
     window.imprimirComprovanteSangria(operador, valor, motivo, data.toLocaleDateString('pt-BR') + ' ' + horaAtual);
     
     window.mostrarAvisoModal("Sangria registrada e comprovante impresso com sucesso!", "Sangria Realizada");
     window.fecharModalSangria();
 };
+
+// ==============================================================
+// LÓGICA DO DROPDOWN PARA O MODAL DE CONSULTAR PREÇO (F7)
+// ==============================================================
+let indexSugestaoPreco = -1;
+
+window.handleInputPrecoSearch = function(termo) {
+    indexSugestaoPreco = -1;
+    let container = document.getElementById('lista-sugestoes-preco');
+    let config = window.obterDados ? window.obterDados("configEmpresa") || {} : {};
+    
+    if (config.usarBuscaNome !== true) { container.style.display = 'none'; container.innerHTML = ''; return; }
+    termo = termo.trim().toLowerCase();
+    if (!termo || termo.length < 2 || /^\d+$/.test(termo)) { container.style.display = 'none'; container.innerHTML = ''; return; }
+
+    let produtos = window.obterDados ? window.obterDados("produtos") || {} : {};
+    let encontrados = [];
+    Object.keys(produtos).forEach(codigo => {
+        let p = produtos[codigo];
+        if (p && p.nome && p.nome.toLowerCase().includes(termo)) encontrados.push({ codigo: codigo, p: p });
+    });
+
+    if (encontrados.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+
+    container.innerHTML = '';
+    encontrados.forEach(item => {
+        let div = document.createElement('div');
+        div.className = 'suggestion-item-caixa';
+        div.innerHTML = `<div style="display:flex; flex-direction:column; text-align:left;"><strong style="color:#0f172a; font-size:14px;">${item.p.nome}</strong><span style="color:#64748b; font-size:11px;">Cód: ${item.codigo} | Estoque: ${item.p.quantidade || 0} un</span></div><strong style="color:#059669; font-size:14px;">R$ ${(parseFloat(item.p.valor) || 0).toFixed(2)}</strong>`;
+        div.onclick = function() { 
+            document.getElementById("input-consulta-preco").value = item.codigo; 
+            container.style.display = 'none';
+            window.buscarPrecoModal(); // Busca e já mostra o preço grandão
+        };
+        container.appendChild(div);
+    });
+    container.style.display = 'block';
+};
+
+window.handleInputPrecoKeyDown = function(event) {
+    let lista = document.getElementById('lista-sugestoes-preco');
+    let itens = lista ? lista.getElementsByClassName('suggestion-item-caixa') : [];
+
+    if (lista && lista.style.display === 'block' && itens.length > 0) {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault(); indexSugestaoPreco++;
+            if (indexSugestaoPreco >= itens.length) indexSugestaoPreco = 0; destacarSugestaoPreco(itens);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault(); indexSugestaoPreco--;
+            if (indexSugestaoPreco < 0) indexSugestaoPreco = itens.length - 1; destacarSugestaoPreco(itens);
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            if (indexSugestaoPreco >= 0 && indexSugestaoPreco < itens.length) { itens[indexSugestaoPreco].click(); } else { itens[0].click(); }
+        }
+    } else if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        window.buscarPrecoModal();
+    }
+};
+
+function destacarSugestaoPreco(itens) {
+    for (let i = 0; i < itens.length; i++) { itens[i].classList.remove('ativo'); }
+    if (indexSugestaoPreco >= 0 && indexSugestaoPreco < itens.length) {
+        let itemAtivo = itens[indexSugestaoPreco];
+        itemAtivo.classList.add('ativo');
+        itemAtivo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
