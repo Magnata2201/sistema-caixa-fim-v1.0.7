@@ -88,6 +88,7 @@
       
       <div class="botoes-caixa">
         <button onclick="window.abrirOpcoesPagamento()">✅ Finalizar [F2]</button>
+        <button onclick="window.abrirOpcoesPagamento(true)" style="background: #34495e; color: white;">🚫 Finalizar S/ Cupom</button>
         <button onclick="window.abrirModalSenhaCancelar()">❌ Cancelar Itens</button>
         <button onclick="window.fecharCaixa()">📦 Fechar Caixa [F9]</button>
         <button onclick="window.abrirModalSangria()">➖ Sangria [F4]</button>
@@ -232,11 +233,16 @@
     <div class="modal-content">
       <span class="close-button" onclick="fecharModalConsultaPreco()">&times;</span>
       <h3>💲 Consultar Preço</h3>
-      <input type="text" id="input-consulta-preco" placeholder="Bipe o código ou digite o nome" onkeypress="if(event.key === 'Enter') buscarPrecoModal()" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; margin-top: 15px; font-size: 16px;" />
+      
+      <div style="position: relative; width: 100%; margin-top: 15px;">
+          <input type="text" id="input-consulta-preco" placeholder="Bipe o código ou digite o nome" onkeydown="window.handleInputPrecoKeyDown(event)" oninput="window.handleInputPrecoSearch(this.value)" autocomplete="off" style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box;" />
+          <div id="lista-sugestoes-preco" class="suggestions-caixa" style="top: calc(100% + 4px);"></div>
+      </div>
+
       <div id="resultado-consulta-preco" style="margin-top: 20px; font-size: 18px; font-weight: bold; color: #2c3e50; text-align: center; min-height: 80px; display: flex; flex-direction: column; justify-content: center; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc;">
           Aguardando produto...
       </div>
-      <button onclick="buscarPrecoModal()" class="confirm">🔍 Buscar</button>
+      <button onclick="buscarPrecoModal()" class="confirm" style="margin-top: 15px;">🔍 Buscar</button>
     </div>
   </div>
 
