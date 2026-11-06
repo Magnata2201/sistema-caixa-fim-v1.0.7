@@ -1,3 +1,12 @@
+Entendido. No `relatorio.html`, separei a Sangria das Despesas Operacionais e do Cancelamento, sem alterar nenhuma classe CSS ou estrutura visual.
+
+A Sangria agora ganha sua própria variável (`totalSangria`), não afeta o faturamento líquido (Líquido = Bruto - Custo - Despesas), possui um bloco HTML exclusivo na impressão e na tela, e o modal exibe as tabelas divididas.
+
+### `relatorio.html`
+
+Substitua o conteúdo atual do seu arquivo por este:
+
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -82,7 +91,7 @@
       var dataFormatada = partesData.length === 3 ? partesData[2] + "/" + partesData[1] + "/" + partesData[0] : data;
 
       if (vendas.length === 0) {
-          content.innerHTML = "<div class='empty-state'><h3>Sem Movimentação</h3><p>Nenhuma venda, despesa ou cancelamento registrados nesta data.</p></div>";
+          content.innerHTML = "<div class='empty-state'><h3>Sem Movimentação</h3><p>Nenhuma venda, despesa, sangria ou cancelamento registrados nesta data.</p></div>";
           metricasDoDia = null;
           return;
       }
@@ -91,10 +100,12 @@
       var rankingProdutos = {};
       var totalBrutoVendas = 0;
       var totalCustoProdutos = 0;
+      var totalDespesas = 0;
       var totalSangrias = 0;
       var totalCancelado = 0;
       
       var htmlTabelaVendas = "";
+      var htmlTabelaDespesas = "";
       var htmlTabelaSangrias = "";
       var htmlTabelaCancelados = "";
 
@@ -134,18 +145,22 @@
 
             htmlTabelaVendas += `<tr><td>${v.hora||"--:--"}</td><td>${v.produto}</td><td class="center">${absQtd}</td><td class="right">R$ ${subtotal.toFixed(2)}</td></tr>`;
         } 
-        else if (tipo === "gasto" || tipo === "despesa" || tipo === "sangria" || tipo === "saída") {
+        else if (tipo === "gasto" || tipo === "despesa" || tipo === "saída" || tipo === "saida") {
+            totalDespesas += subtotal;
+            htmlTabelaDespesas += `<tr><td>${v.hora||"--:--"}</td><td>${v.produto || "Despesa"}</td><td class="center">-</td><td class="right text-danger">- R$ ${subtotal.toFixed(2)}</td></tr>`;
+        }
+        else if (tipo === "sangria") {
             totalSangrias += subtotal;
-            htmlTabelaSangrias += `<tr><td>${v.hora||"--:--"}</td><td>${v.produto || "Saída"}</td><td class="center">-</td><td class="right text-danger">- R$ ${subtotal.toFixed(2)}</td></tr>`;
-        } 
+            htmlTabelaSangrias += `<tr><td>${v.hora||"--:--"}</td><td>${v.produto || "Sangria"}</td><td class="center">-</td><td class="right" style="color:#8b5cf6;">- R$ ${subtotal.toFixed(2)}</td></tr>`;
+        }
         else if (tipo === "cancelado" || tipo === "devolucao" || tipo === "descarte") {
             totalCancelado += subtotal;
             htmlTabelaCancelados += `<tr><td>${v.hora||"--:--"}</td><td>${v.produto} (${tipo.toUpperCase()})</td><td class="center">${absQtd}</td><td class="right text-danger">R$ ${subtotal.toFixed(2)}</td></tr>`;
         }
       });
 
-      // Líquido Real = Bruto - Custo dos Produtos - Despesas/Sangrias[cite: 18]
-      var totalLiquido = totalBrutoVendas - totalCustoProdutos - totalSangrias;
+      // Líquido Real = Bruto - Custo dos Produtos - Despesas (Sangria não diminui o lucro)
+      var totalLiquido = totalBrutoVendas - totalCustoProdutos - totalDespesas;
 
       var rankingArray = Object.keys(rankingProdutos).map(function(k) { return rankingProdutos[k]; });
       rankingArray.sort(function(a, b) { return b.qtd - a.qtd; }); 
@@ -155,6 +170,7 @@
           data: dataFormatada,
           bruto: totalBrutoVendas,
           custo: totalCustoProdutos,
+          despesas: totalDespesas,
           sangrias: totalSangrias,
           liquido: totalLiquido,
           cancelado: totalCancelado,
@@ -164,11 +180,13 @@
 
       var html = `<div class="report-header-info"><h2>Resumo do Dia: ${dataFormatada}</h2></div>`;
 
+      // Atualizado para 5 blocos, adicionando Sangria (usando a mesma classe kpi-card para manter o visual, apenas alterando as cores)
       html += `
-        <div class="kpi-grid">
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
             <div class="kpi-card box-bruto"><span>Faturamento Bruto</span><strong>R$ ${totalBrutoVendas.toFixed(2)}</strong></div>
             <div class="kpi-card" style="background: #fffbeb; border-color: #fde68a;"><span>Custo dos Produtos</span><strong style="color: #d97706;">R$ ${totalCustoProdutos.toFixed(2)}</strong></div>
-            <div class="kpi-card box-saida"><span>Despesas / Sangrias</span><strong>- R$ ${totalSangrias.toFixed(2)}</strong></div>
+            <div class="kpi-card box-saida"><span>Despesas</span><strong>- R$ ${totalDespesas.toFixed(2)}</strong></div>
+            <div class="kpi-card" style="background: #f3f0ff; border-color: #ddd6fe;"><span>Sangrias</span><strong style="color: #8b5cf6;">- R$ ${totalSangrias.toFixed(2)}</strong></div>
             <div class="kpi-card box-liquido"><span>Faturamento Líquido</span><strong>R$ ${totalLiquido.toFixed(2)}</strong></div>
         </div>
       `;
@@ -210,10 +228,19 @@
           </div>`;
       }
 
+      if (totalDespesas > 0) {
+          html += `
+          <h3 class="section-title">📉 Detalhamento de Despesas</h3>
+          <table class="tb-detalhes">
+              <thead><tr><th>Hora</th><th>Descrição</th><th class="center">Ref</th><th class="right">Valor</th></tr></thead>
+              <tbody>${htmlTabelaDespesas}</tbody>
+          </table>`;
+      }
+
       if (totalSangrias > 0) {
           html += `
-          <h3 class="section-title">💸 Detalhamento de Saídas (Despesas/Sangrias)</h3>
-          <table class="tb-detalhes">
+          <h3 class="section-title" style="color: #8b5cf6;">💸 Detalhamento de Sangrias</h3>
+          <table class="tb-detalhes" style="border-top-color: #8b5cf6;">
               <thead><tr><th>Hora</th><th>Descrição</th><th class="center">Ref</th><th class="right">Valor</th></tr></thead>
               <tbody>${htmlTabelaSangrias}</tbody>
           </table>`;
@@ -299,12 +326,14 @@
 
         html += "<div class='divider'></div><h3>SAÍDAS E CUSTOS</h3>";
         html += "<div class='info-line text-danger'><span>CUSTO DOS PRODUTOS:</span><span>- R$ " + metricasDoDia.custo.toFixed(2) + "</span></div>";
-        html += "<div class='info-line text-danger'><span>DESPESAS / SANGRIAS:</span><span>- R$ " + metricasDoDia.sangrias.toFixed(2) + "</span></div>";
-        html += "<div class='info-line text-danger'><span>CANCELAMENTOS:</span><span>R$ " + metricasDoDia.cancelado.toFixed(2) + "</span></div>";
+        html += "<div class='info-line text-danger'><span>DESPESAS:</span><span>- R$ " + metricasDoDia.despesas.toFixed(2) + "</span></div>";
+        html += "<div class='info-line text-danger'><span>SANGRIAS (NÃO AFETA LUCRO):</span><span>- R$ " + metricasDoDia.sangrias.toFixed(2) + "</span></div>";
+        if (metricasDoDia.cancelado > 0) {
+            html += "<div class='info-line text-danger'><span>CANCELAMENTOS:</span><span>R$ " + metricasDoDia.cancelado.toFixed(2) + "</span></div>";
+        }
 
         html += "<div class='divider'></div>";
-        html += "<div class='info-line bold' style='font-size:14px;'><span>LÍQUIDO EM CAIXA:</span><span>R$ " + metricasDoDia.liquido.toFixed(2) + "</span></div>";
-        html += "<p style='font-size:9px;'>(Bruto abatendo Custos e Despesas)</p>";
+        html += "<div class='info-line bold' style='font-size:14px;'><span>LÍQUIDO (Bruto-Custo-Desp):</span><span>R$ " + metricasDoDia.liquido.toFixed(2) + "</span></div>";
 
         if (metricasDoDia.top5.length > 0) {
             html += "<div class='divider'></div><h3>TOP 5 MAIS VENDIDOS</h3>";
@@ -326,3 +355,6 @@
   </script>
 </body>
 </html>
+```[cite: 3]
+
+```
