@@ -49,6 +49,8 @@ function abrirModalGasto() {
   
   document.getElementById('g-desc').value = '';
   document.getElementById('g-val').value = '';
+  document.getElementById('g-tipo-mov').value = 'despesa'; // Padrão
+  
   var sel = document.getElementById('g-forma-pag');
   if (sel) sel.value = 'Dinheiro';
 }
@@ -59,6 +61,7 @@ function fecharModalGasto() {
 }
 
 function salvarGasto() {
+  var tipo = document.getElementById('g-tipo-mov').value;
   var desc = document.getElementById('g-desc').value.trim();
   var valor = parseFloat(document.getElementById('g-val').value);
   var data = document.getElementById('g-data').value;
@@ -78,7 +81,7 @@ function salvarGasto() {
   var horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   movimentacoes[data].push({
-    tipoMovimento: 'gasto',
+    tipoMovimento: tipo,
     produto: desc,
     valor: valor,
     quantidade: 1, 
@@ -88,9 +91,9 @@ function salvarGasto() {
 
   if (window.salvarDados) {
       window.salvarDados("movimentacoes", movimentacoes);
-      alert("Despesa registrada com sucesso na Nuvem!");
+      alert("Registro salvo com sucesso na Nuvem!");
   } else {
-      alert("Erro ao conectar com a nuvem, despesa não salva.");
+      alert("Erro ao conectar com a nuvem, registro não salvo.");
   }
 
   fecharModalGasto();
@@ -108,11 +111,15 @@ function verDespesas(indexArray) {
     dia.listaDeGastos.forEach(function(gasto) {
         var tr = document.createElement("tr");
         var valorGasto = parseFloat(gasto.valor) || 0;
-        var descricaoGasto = gasto.produto || "Despesa não detalhada";
+        var descricaoGasto = gasto.produto || "Não detalhado";
         var chaveForma = normalizarFormaPag(gasto.formaPagamento);
         var badge = "<span class='badge-pag badge-" + chaveForma + "'>" + rotuloFormaPag(chaveForma) + "</span>";
+        
+        var tipoLabel = gasto.tipoMovimento === 'sangria' 
+            ? "<strong style='color: #8b5cf6;'>Sangria</strong>" 
+            : "<strong style='color: #ef4444;'>Despesa</strong>";
 
-        tr.innerHTML = "<td>" + (gasto.hora || "--:--") + "</td>" +
+        tr.innerHTML = "<td>" + tipoLabel + "</td>" +
                        "<td>" + descricaoGasto + "</td>" +
                        "<td>" + badge + "</td>" +
                        "<td style='color:#ef4444; font-weight:bold; text-align:right;'>R$ " + valorGasto.toFixed(2).replace('.', ',') + "</td>";
@@ -142,9 +149,11 @@ function gerarRelatorio() {
   var tbody = document.getElementById("corpo-tabela");
   var totalSpan = document.getElementById("valor-total");
   var caixaTotal = document.getElementById("caixa-total");
+  
   var cardBruto = document.getElementById("total-bruto-geral");
   var cardCusto = document.getElementById("total-custo-geral");
   var cardDespesas = document.getElementById("total-despesas-geral");
+  var cardSangrias = document.getElementById("total-sangrias-geral");
   
   if (!tbody || !totalSpan || !caixaTotal) return;
 
@@ -153,6 +162,7 @@ function gerarRelatorio() {
   var somaBrutoGeral = 0;
   var somaCustoGeral = 0;
   var somaDespesasGeral = 0;
+  var somaSangriasGeral = 0;
   var totalLiquidoGeral = 0;
 
   var movimentacoes = window.obterDados ? (window.obterDados("movimentacoes") || {}) : {};
@@ -179,6 +189,7 @@ function gerarRelatorio() {
           bruto: 0, 
           custoProdutos: 0, 
           despesas: 0, 
+          sangrias: 0,
           liquido: 0, 
           dataAmigavel: dataAmigavel, 
           dataISO: dataComparavel, 
@@ -196,18 +207,23 @@ function gerarRelatorio() {
              return;
         }
 
-        if (tipo === 'gasto' || tipo === 'despesa' || tipo === 'saída' || tipo === 'saida' || tipo === 'sangria') {
+        // Separa a Sangria da Despesa Operacional
+        if (tipo === 'sangria') {
+          resumoDiario[dataComparavel].sangrias += valorTotalVendaItem;
+          resumoDiario[dataComparavel].listaDeGastos.push(mov);
+        }
+        else if (tipo === 'gasto' || tipo === 'despesa' || tipo === 'saída' || tipo === 'saida') {
           resumoDiario[dataComparavel].despesas += valorTotalVendaItem;
           resumoDiario[dataComparavel].listaDeGastos.push(mov); 
-        } else {
-          // É uma venda: calcula o bruto e busca o custo unitário do produto cadastrado
+        } 
+        else {
+          // É uma venda
           resumoDiario[dataComparavel].bruto += valorTotalVendaItem;
 
           var custoUnitario = 0;
           if (mov.codigo && produtosBD[mov.codigo] && produtosBD[mov.codigo].custo !== undefined) {
             custoUnitario = parseFloat(produtosBD[mov.codigo].custo) || 0;
           } else if (mov.produto) {
-            // Tenta encontrar pelo nome caso não tenha código salvo
             var nomeMov = mov.produto.toLowerCase().trim();
             for (var c in produtosBD) {
               if (produtosBD[c].nome && produtosBD[c].nome.toLowerCase().trim() === nomeMov) {
@@ -216,11 +232,11 @@ function gerarRelatorio() {
               }
             }
           }
-
           resumoDiario[dataComparavel].custoProdutos += (custoUnitario * qtd);
         }
       });
 
+      // Cálculo do Faturamento Líquido: as sangrias não diminuem o lucro, pois é apenas dinheiro trocando de lugar (ex: saindo do caixa pro cofre/banco)
       resumoDiario[dataComparavel].liquido = resumoDiario[dataComparavel].bruto - resumoDiario[dataComparavel].custoProdutos - resumoDiario[dataComparavel].despesas;
     }
   }
@@ -233,11 +249,12 @@ function gerarRelatorio() {
   window.dadosRelatorioAtual = diasFiltrados;
 
   if (diasFiltrados.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='6' style='text-align: center; color: #64748b; padding: 20px;'>Nenhum faturamento ou gasto encontrado neste período.</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7' style='text-align: center; color: #64748b; padding: 20px;'>Nenhum faturamento ou gasto encontrado neste período.</td></tr>";
     totalSpan.innerText = "R$ 0,00";
     if (cardBruto) cardBruto.innerText = "R$ 0,00";
     if (cardCusto) cardCusto.innerText = "R$ 0,00";
     if (cardDespesas) cardDespesas.innerText = "R$ 0,00";
+    if (cardSangrias) cardSangrias.innerText = "R$ 0,00";
     caixaTotal.className = "total-faturamento";
     return;
   }
@@ -246,6 +263,7 @@ function gerarRelatorio() {
     somaBrutoGeral += dia.bruto;
     somaCustoGeral += dia.custoProdutos;
     somaDespesasGeral += dia.despesas;
+    somaSangriasGeral += dia.sangrias;
     totalLiquidoGeral += dia.liquido;
 
     var tr = document.createElement("tr");
@@ -259,6 +277,7 @@ function gerarRelatorio() {
                    "<td style='color: #00a2ff; font-weight: 500;'>R$ " + dia.bruto.toFixed(2).replace('.', ',') + "</td>" +
                    "<td style='color: #f59e0b;'>R$ " + dia.custoProdutos.toFixed(2).replace('.', ',') + "</td>" +
                    "<td style='color: #ef4444;'>R$ " + dia.despesas.toFixed(2).replace('.', ',') + "</td>" +
+                   "<td style='color: #8b5cf6;'>R$ " + dia.sangrias.toFixed(2).replace('.', ',') + "</td>" +
                    "<td style='" + estiloCorLiquido + "'>R$ " + dia.liquido.toFixed(2).replace('.', ',') + "</td>" +
                    "<td>" + botaoVerDespesas + "</td>";
     tbody.appendChild(tr);
@@ -267,6 +286,8 @@ function gerarRelatorio() {
   if (cardBruto) cardBruto.innerText = "R$ " + somaBrutoGeral.toFixed(2).replace('.', ',');
   if (cardCusto) cardCusto.innerText = "R$ " + somaCustoGeral.toFixed(2).replace('.', ',');
   if (cardDespesas) cardDespesas.innerText = "R$ " + somaDespesasGeral.toFixed(2).replace('.', ',');
+  if (cardSangrias) cardSangrias.innerText = "R$ " + somaSangriasGeral.toFixed(2).replace('.', ',');
+  
   totalSpan.innerText = "R$ " + totalLiquidoGeral.toFixed(2).replace('.', ',');
   
   if (totalLiquidoGeral < 0) {
