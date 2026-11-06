@@ -283,7 +283,7 @@
         var doc = iframe.contentDocument || iframe.contentWindow.document;
 
         var configLoja = window.obterDados ? window.obterDados("configLoja") : null;
-        var nomeLoja = configLoja && configLoja.nome ? configLoja.nome : "Nome da Loja";
+        var nomeLoja = configLoja && configLoja.nome ? configLoja.nome : "Comprovante de sangria";
         var cnpjLoja = configLoja && configLoja.cnpj ? configLoja.cnpj : "00.000.000/0000-00";
         var operador = sessionStorage.getItem("usuarioLogado") || "Admin";
 
